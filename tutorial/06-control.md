@@ -332,13 +332,15 @@ program can build an instruction and obey it:
 
 ```ace
 MAKE
-  1   Q, DL 7,1
-  2   TS 6 - TS 9
-  3   MAKE 20 - TS 10
-  5   OR
-  6   TS 8 - TS 6
-  7   B, 1
-  8   B, MAKE 8
+  1   NEVER
+  2   TS 8 - TS 6
+  3   Q, DL 7,1
+  4   TS 6 - TS 9
+  5   MAKE 20 - TS 10
+  7   OR
+  8   TS 8 - TS 6
+  9   B, 1
+ 10   B, MAKE 10
  20   0000,0001,0000,0000,0000,0000,0000,0000
 
 DL 7,1  +7
@@ -350,7 +352,8 @@ DL 7,2  +1
 ```
 
 Type Q puts digits 17 to 32 of the instruction, here the position DL 7,1,
-into TS 6. OR adds the code of type O from MAKE 20, and `B, 1` obeys the
-result: punch DL 7.
+into TS 6. It leaves digits 1 to 16 as they were, so the first two
+instructions clear TS 6. OR adds the code of type O from MAKE 20, and `B, 1`
+obeys the result: punch DL 7.
 
 `B, 1, X` does the same and names X as well. INDEXIN 11 is written that way.

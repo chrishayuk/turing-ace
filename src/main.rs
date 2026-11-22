@@ -10,7 +10,7 @@ ace: the Automatic Computing Engine as Alan Turing proposed it in 1945
 
 usage:
   ace run FILE [--input N,N,...] [--cards numbers|listing|holes] [--trace]
-          [--time] [--errata LIST] [--limit N]
+          [--time] [--cold] [--json] [--errata LIST] [--limit N]
         Run a job: the instruction tables in FILE and those it uses from the
         library. It starts at the first table in the file and ends when an
         instruction passes control to itself.
@@ -20,11 +20,19 @@ usage:
         the line a tabulator would list, or as rows of holes.
         --trace prints every instruction obeyed, with the minor cycle it
         was found in. --time prints the machine time taken.
+        --cold starts with nothing in the machine but the deck in the
+        reader: see `ace deck`.
         --json prints the whole run as one JSON object instead: the
         machine before the start, every instruction obeyed with what it
         changed, and the cards. The playground steps through it.
         FILE may be `-`: standard input is then the tables, a line `----`,
         and the numbers.
+  ace deck FILE [--holes] [--errata LIST]
+        List the deck of cards that loads the job into an empty machine:
+        what each card puts where, and with --holes the holes themselves.
+        `ace run FILE --cold` starts from that deck. Section 7 of the report:
+        the initial order `consists of 0 throughout`, which reads a card into
+        DL 0; each card of the deck carries its own orders.
   ace tables FILE [--emit listing|cards|digits] [--errata LIST]
         Show a job in machine form: every instruction with its position,
         its 32 digits and its popular form; or as the 80-column instruction
@@ -168,13 +176,14 @@ fn real_main() -> Result<(), String> {
                 None => STEP_LIMIT,
             };
             let (trace, timed, json) = (args.flag("--trace"), args.flag("--time"), args.flag("--json"));
+            let cold = args.flag("--cold");
             let unit = job(&args)?;
             let how = cards.or(unit.cards.clone()).unwrap_or("numbers".into());
             show_card(&[0; 12], &how)?;
+            let (mut m, deck) = if cold { ace::deck::cold(&unit, &input)? } else { (load(&unit, &input)?, 0) };
             if json {
-                return run_json(&unit, &input, limit, &how);
+                return run_json(&unit, m, deck, limit, &how);
             }
-            let mut m = load(&unit, &input)?;
             let mut shown = 0;
             let stop = run(&mut m, limit, |m, e| {
                 if trace {
@@ -193,6 +202,9 @@ fn real_main() -> Result<(), String> {
                 shown = m.punched.len();
             });
             if timed {
+                if deck > 0 {
+                    println!("{} cards of the deck read from cold", deck);
+                }
                 println!(
                     "{} instructions in {} minor cycles: {} of machine time",
                     m.steps,
@@ -204,6 +216,19 @@ fn real_main() -> Result<(), String> {
                 Stop::Idle(_) => Ok(()),
                 stop => Err(format!("stopped at {}: {}", place(&unit, m.cd), stop)),
             }
+        }
+        "deck" => {
+            let unit = job(&args)?;
+            let deck = ace::deck::deck(&unit)?;
+            let holes = args.flag("--holes");
+            for (n, punched) in deck.iter().enumerate() {
+                println!("card {:>3}  {}", n + 1, punched.what);
+                if holes {
+                    println!("{}\n", show_card(&punched.card, "holes")?);
+                }
+            }
+            println!("{} cards", deck.len());
+            Ok(())
         }
         "tables" => {
             let emit = args.opt("--emit").unwrap_or("listing".into());
@@ -345,10 +370,9 @@ fn tables(unit: &Unit, emit: &str) -> Result<(), String> {
 /// one after it finished; CD and CI; an index into `forms`, its popular form;
 /// the temporary storages that changed as [n, word]; the minor cycles that
 /// changed as [line, slot, word]; and how many cards had been punched.
-fn run_json(unit: &Unit, input: &[u32], limit: u64, how: &str) -> Result<(), String> {
+fn run_json(unit: &Unit, mut m: ace::machine::Machine, deck: usize, limit: u64, how: &str) -> Result<(), String> {
     use std::collections::HashMap;
     use std::fmt::Write;
-    let mut m = load(unit, input)?;
     let mut out = String::from("{\"start\":{\"cells\":[");
     let mut first = true;
     for (dl, line) in m.lines.iter().enumerate() {
@@ -360,7 +384,8 @@ fn run_json(unit: &Unit, input: &[u32], limit: u64, how: &str) -> Result<(), Str
         }
     }
     let ts: Vec<String> = m.ts[1..].iter().map(|w| w.to_string()).collect();
-    let _ = write!(out, "],\"ts\":[{}],\"cd\":{}}},\"names\":[", ts.join(","), m.cd);
+    let reader: Vec<String> = m.reader.iter().map(|c| format!("[{}]", c.iter().map(|w| w.to_string()).collect::<Vec<_>>().join(","))).collect();
+    let _ = write!(out, "],\"ts\":[{}],\"cd\":{},\"reader\":[{}]}},\"names\":[", ts.join(","), m.cd, reader.join(","));
     let mut first = true;
     for t in &unit.tables {
         for slot in &t.slots {
@@ -423,7 +448,7 @@ fn run_json(unit: &Unit, input: &[u32], limit: u64, how: &str) -> Result<(), Str
     let raw: Vec<String> = m.punched.iter().map(|c| format!("[{}]", c.iter().map(|w| w.to_string()).collect::<Vec<_>>().join(","))).collect();
     let _ = write!(
         out,
-        "],\"forms\":[{}],\"cards\":[{}],\"raw\":[{}],\"stop\":{},\"idle\":{},\"at\":{},\"time\":{},\"count\":{}}}",
+        "],\"forms\":[{}],\"cards\":[{}],\"raw\":[{}],\"stop\":{},\"idle\":{},\"at\":{},\"time\":{},\"count\":{},\"deck\":{}}}",
         forms.join(","),
         cards.join(","),
         raw.join(","),
@@ -431,7 +456,8 @@ fn run_json(unit: &Unit, input: &[u32], limit: u64, how: &str) -> Result<(), Str
         matches!(stop, Stop::Idle(_)),
         quote(&place(unit, m.cd)),
         m.time,
-        m.steps
+        m.steps,
+        deck
     );
     println!("{}", out);
     Ok(())

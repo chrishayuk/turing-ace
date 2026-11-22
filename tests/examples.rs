@@ -47,3 +47,25 @@ fn every_example_prints_its_out_file() {
     }
     assert!(failed.is_empty(), "{}", failed.join("\n"));
 }
+
+/// Loaded from cold, from the deck of cards alone, every example punches the
+/// same cards as when it is put straight into the machine.
+#[test]
+fn every_example_runs_the_same_from_cold() {
+    let mut failed = Vec::new();
+    for entry in fs::read_dir("examples").unwrap() {
+        let name = entry.unwrap().file_name().into_string().unwrap();
+        let Some(stem) = name.strip_suffix(".ace") else { continue };
+        let text = fs::read_to_string(format!("examples/{}", name)).unwrap();
+        let input = numbers(&fs::read_to_string(format!("examples/{}.in", stem)).unwrap_or_default()).unwrap();
+        let unit = assemble(&text, &["all"]);
+        let mut warm = load(&unit, &input).unwrap();
+        let warm_stop = run(&mut warm, STEP_LIMIT, |_, _| {});
+        let (mut cold, cards) = ace::deck::cold(&unit, &input).unwrap();
+        let cold_stop = run(&mut cold, STEP_LIMIT, |_, _| {});
+        if warm.punched != cold.punched || warm_stop.to_string() != cold_stop.to_string() || cards == 0 {
+            failed.push(format!("{}: warm {} cards ({}), cold {} cards ({})", stem, warm.punched.len(), warm_stop, cold.punched.len(), cold_stop));
+        }
+    }
+    assert!(failed.is_empty(), "{}", failed.join("\n"));
+}

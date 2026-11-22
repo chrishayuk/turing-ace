@@ -5,6 +5,7 @@
 pub mod assemble;
 pub mod audit;
 pub mod check;
+pub mod deck;
 pub mod json;
 pub mod lsp;
 pub mod machine;

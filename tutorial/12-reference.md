@@ -62,7 +62,7 @@ ace: the Automatic Computing Engine as Alan Turing proposed it in 1945
 
 usage:
   ace run FILE [--input N,N,...] [--cards numbers|listing|holes] [--trace]
-          [--time] [--errata LIST] [--limit N]
+          [--time] [--cold] [--json] [--errata LIST] [--limit N]
         Run a job: the instruction tables in FILE and those it uses from the
         library. It starts at the first table in the file and ends when an
         instruction passes control to itself.
@@ -72,11 +72,19 @@ usage:
         the line a tabulator would list, or as rows of holes.
         --trace prints every instruction obeyed, with the minor cycle it
         was found in. --time prints the machine time taken.
+        --cold starts with nothing in the machine but the deck in the
+        reader: see `ace deck`.
         --json prints the whole run as one JSON object instead: the
         machine before the start, every instruction obeyed with what it
         changed, and the cards. The playground steps through it.
         FILE may be `-`: standard input is then the tables, a line `----`,
         and the numbers.
+  ace deck FILE [--holes] [--errata LIST]
+        List the deck of cards that loads the job into an empty machine:
+        what each card puts where, and with --holes the holes themselves.
+        `ace run FILE --cold` starts from that deck. Section 7 of the report:
+        the initial order `consists of 0 throughout`, which reads a card into
+        DL 0; each card of the deck carries its own orders.
   ace tables FILE [--emit listing|cards|digits] [--errata LIST]
         Show a job in machine form: every instruction with its position,
         its 32 digits and its popular form; or as the 80-column instruction

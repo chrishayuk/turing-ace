@@ -2,15 +2,18 @@
 # column 17 carries out whatever is in TS 6, and if that is of type A the
 # machine goes on at the instruction after the B. Here the instruction is
 # made by the program: Q puts a position into digits 17-32 of TS 6, and the
-# code of type O is added to digits 1-16 by OR.
+# code of type O is added to digits 1-16 by OR. Q leaves digits 1-16 of TS 6
+# as they were, so TS 6 is cleared first.
 MAKE
-  1   Q, DL 7,1
-  2   TS 6 - TS 9
-  3   MAKE 20 - TS 10
-  5   OR
-  6   TS 8 - TS 6
-  7   B, 1
-  8   B, MAKE 8
+  1   NEVER
+  2   TS 8 - TS 6
+  3   Q, DL 7,1
+  4   TS 6 - TS 9
+  5   MAKE 20 - TS 10
+  7   OR
+  8   TS 8 - TS 6
+  9   B, 1
+ 10   B, MAKE 10
 # The code of type O, digits 5-8 = 0001.
  20   0000,0001,0000,0000,0000,0000,0000,0000
 
