@@ -149,7 +149,7 @@ UNBURY  (library: ours, to the report's description)
    42   DL 36,27   0110,0000,0000,0000,0010,0000,0000,0000   B, DL 0,3
 
 DL 3,5            1001,1001,1110,0000,0000,0000,0000,0000   1945
-TS 27             0000,0101,0000,0000,0001,0011,0000,0000   13107360
+TS 27             0000,0000,0000,0000,0001,0011,0000,0000   13107200
 ```
 
 That listing is the *machine form* of the job: where each instruction is, its
