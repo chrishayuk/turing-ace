@@ -150,7 +150,7 @@ fn an_editor_session() {
     let edits = c.request("textDocument/formatting", Client::at(0, 0));
     let new = edits.get("result").items()[0].get("newText").str().unwrap();
     assert!(new.contains("\n   3   TS 28 - DL 2,1\n"), "{}", new);
-    assert!(new.contains("\nTS 27    L, DL 3,5\n"), "{}", new);
+    assert!(new.contains("\nTS 27    DL 3,5\n"), "{}", new);
 
     // A change that names a table nobody has is an error on that line, and a
     // transfer into TS 4 is a warning.
