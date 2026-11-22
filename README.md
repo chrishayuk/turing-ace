@@ -122,7 +122,7 @@ that format is ours. Loading takes far longer than running:
 $ ace run examples/answer.ace --cold --time
  000000042
 127 cards of the deck read from cold
-2429 instructions in 2441073 minor cycles: 78.1 seconds of machine time
+2430 instructions in 2441105 minor cycles: 78.1 seconds of machine time
 ```
 
 `tables` shows the machine form, and `--emit cards` the 80-column instruction
