@@ -53,7 +53,32 @@ pub struct Erratum {
     pub detail: &'static str,
     /// Who noticed it first, as far as we could find.
     pub known: &'static str,
+    /// What kind of correction it is: see `Kind`.
+    pub kind: Kind,
     edits: &'static [(&'static str, &'static str)],
+}
+
+/// Not every correction is the same kind of thing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Kind {
+    /// The table is wrong under any reading of the report.
+    Slip,
+    /// The report says two things, and the table follows the one not taken
+    /// here (see `ace decisions`).
+    Conflict,
+    /// Needed only because of how the tables written here, which the report
+    /// describes but does not print, do their work.
+    Ours,
+}
+
+impl Kind {
+    pub fn describe(self) -> &'static str {
+        match self {
+            Kind::Slip => "a slip: wrong under any reading of the report",
+            Kind::Conflict => "a conflict: the report says two things, and the table follows the other",
+            Kind::Ours => "ours: needed only because of how the tables written here work",
+        }
+    }
 }
 
 pub const ERRATA: &[Erratum] = &[
@@ -68,6 +93,7 @@ pub const ERRATA: &[Erratum] = &[
                  has just built over the minor cycle it was sent to read. The literal becomes \
                  0000,0101,0000,0000.",
         known: "Carpenter and Doran, 1986, note 17",
+        kind: Kind::Slip,
         edits: &[("Q, 0000,0100,0000,0000", "Q, 0000,0101,0000,0000")],
     },
     Erratum {
@@ -82,6 +108,7 @@ pub const ERRATA: &[Erratum] = &[
                  digits go 16 places up, out of TS 4 and into digits 1-16 of TS 5. Line 5 takes \
                  TS 4. It becomes TS 5 - TS 6.",
         known: "not that we found",
+        kind: Kind::Slip,
         edits: &[("5   TS 4 - TS 6 ", "5   TS 5 - TS 6 ")],
     },
     Erratum {
@@ -92,6 +119,7 @@ pub const ERRATA: &[Erratum] = &[
                  instruction after the one that called it, which is past the end of the table. \
                  A subsidiary ends by taking the note off: B, UNBURY, as CALPOL does.",
         known: "Carpenter and Doran, 1986, note 18",
+        kind: Kind::Slip,
         edits: &[("B, BURY", "B, UNBURY")],
     },
     Erratum {
@@ -104,6 +132,7 @@ pub const ERRATA: &[Erratum] = &[
                  TS 20, 21 are zero anyway; used a second time, CALPOL starts from the last \
                  product of the time before. It becomes CLEAR TS 20, 21.",
         known: "Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper",
+        kind: Kind::Slip,
         edits: &[("CLEAR TS 22, 23", "CLEAR TS 20, 21")],
     },
     Erratum {
@@ -114,6 +143,7 @@ pub const ERRATA: &[Erratum] = &[
                  TS 2 and TS 3; the logical operations of section 12 and Fig. 29 take TS 9 and \
                  TS 10, as INDEXIN knows. The two transfers go to TS 9 and TS 10.",
         known: "Carpenter and Doran, 1986, note 12, for the conflict in section 12",
+        kind: Kind::Conflict,
         edits: &[("TS 27 - TS 2; TS 29 - TS 3; AND", "TS 27 - TS 9; TS 29 - TS 10; AND")],
     },
     Erratum {
@@ -128,6 +158,7 @@ pub const ERRATA: &[Erratum] = &[
                  way out is CALPOL 50. The two instructions, B, CALPOL 50 and B, CALPOL 37, \
                  are kept as numbers at the end of the table and fetched.",
         known: "Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper",
+        kind: Kind::Slip,
         edits: &[
             ("Q, CALPOL 40;\nTS 6 - TS 15; Q, CALPOL 37; TS 6 - TS 16;", "CALPOL 61 - TS 15;\nCALPOL 62 - TS 16;"),
             ("TS 23 - TS 26; B, UNBURY.\n", "TS 23 - TS 26; B, UNBURY.\nCALPOL 61. B, CALPOL 50\nCALPOL 62. B, CALPOL 37\n"),
@@ -142,6 +173,7 @@ pub const ERRATA: &[Erratum] = &[
                  left there: the instruction that returned, which returns to B, 1 again, for \
                  ever. TS 24 - TS 6 is put in front of it.",
         known: "not that we found; it depends on how BURY and UNBURY are written",
+        kind: Kind::Ours,
         edits: &[("B, DISCRIM; B, 1", "B, DISCRIM; TS 24 - TS 6; B, 1")],
     },
     Erratum {
@@ -154,6 +186,7 @@ pub const ERRATA: &[Erratum] = &[
                  become the instruction L, DL 3,1 and digit 25, which is 0 in DL 3 and 1 in \
                  DL 4, where PLUSIND arrives after 32 minor cycles.",
         known: "Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper",
+        kind: Kind::Slip,
         edits: &[
             ("DL 1,14  0000,0101,0000,0000,0100,0110,0000,0000", "DL 1,14  L, DL 3,1"),
             ("DL 1,15  0000,0000,0000,0000,0000,0100,0000,0000", "DL 1,15  0000,0000,0000,0000,0000,0000,1000,0000"),
@@ -169,6 +202,7 @@ pub const ERRATA: &[Erratum] = &[
                  answer as for a word of 32 zeros. The corrected table adds TS 8 as well as \
                  subtracting it, and uses either TS 5.",
         known: "not that we found",
+        kind: Kind::Slip,
         edits: &[],
     },
 ];

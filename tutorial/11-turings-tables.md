@@ -106,47 +106,60 @@ $ ace errata
 literal  (INDEXIN)
     INDEXIN 1 builds the code of type K, not of type L
     INDEXIN makes an instruction to fetch a minor cycle and obeys it from TS 6. Line 1 supplies the digits of its type: 0000,0100, which after the rotation are digits 5-8 = 0100. Fig. 19 gives 0100 to type K, which stores TS 6, and 0101 to type L, which fetches. As printed the table writes the instruction it has just built over the minor cycle it was sent to read. The literal becomes 0000,0101,0000,0000.
+    Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran, 1986, note 17.
 
 half  (INDEXIN)
     INDEXIN 5 takes the half of the partial sum the digits have left
     Type Q can only fill digits 17-32, so the type digits are made there and moved by ROTATE 16, `Rotate the content of TS 4, TS 5 forwards 16 places`. Section 12 says which way forwards is: the facility is for `multiplying the partial sum by a power of 2`, and consists in `enabling the partial sums to be delayed`. A delayed digit comes out later and later digits are more significant, so the digits go 16 places up, out of TS 4 and into digits 1-16 of TS 5. Line 5 takes TS 4. It becomes TS 5 - TS 6.
+    Kind: a slip: wrong under any reading of the report.
     Known before: not that we found.
 
 return  (INDEXIN)
     INDEXIN 13 buries where it should unbury
     The table ends B, BURY. BURY adds a note to the list and comes back to the instruction after the one that called it, which is past the end of the table. A subsidiary ends by taking the note off: B, UNBURY, as CALPOL does.
+    Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran, 1986, note 18.
 
 clear  (CALPOL)
     CALPOL 1 clears the result, not the running product
     Each turn adds the next coefficient, in TS 18, 19, to the product so far, in TS 20, 21. Before the first turn that product must be zero. The table clears TS 22, 23, which ADD is about to overwrite. On a machine just switched on TS 20, 21 are zero anyway; used a second time, CALPOL starts from the last product of the time before. It becomes CLEAR TS 20, 21.
+    Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper.
 
 inputs  (CALPOL)
     CALPOL loads TS 2 and TS 3 for an AND that reads TS 9 and TS 10
     The test for the last coefficient is TS 27 & TS 29. The table puts them in TS 2 and TS 3; the logical operations of section 12 and Fig. 29 take TS 9 and TS 10, as INDEXIN knows. The two transfers go to TS 9 and TS 10.
+    Kind: a conflict: the report says two things, and the table follows the other.
     Known before: Carpenter and Doran, 1986, note 12, for the conflict in section 12.
 
 branch  (CALPOL)
     CALPOL builds its two ways on with type Q, which cannot make an instruction
     DISCRIM chooses between two instructions in TS 15 and TS 16, and B, 1 obeys the one chosen. The table makes them with Q, CALPOL 40 and Q, CALPOL 37. Type Q fills digits 17-32 only, so what reaches TS 15 has an instruction number but not the digits of type B: whatever was left in the first half of TS 6 decides what it does. And CALPOL 40 is the middle of the multiplication; the way out is CALPOL 50. The two instructions, B, CALPOL 50 and B, CALPOL 37, are kept as numbers at the end of the table and fetched.
+    Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper.
 
 carry  (CALPOL)
     CALPOL obeys TS 6 after DISCRIM, but the choice is in TS 24
     DISCRIM passes the chosen instruction into TS 24 and comes back through UNBURY, which has to use TS 6 to get back at all. B, 1 then obeys what UNBURY left there: the instruction that returned, which returns to B, 1 again, for ever. TS 24 - TS 6 is put in front of it.
+    Kind: ours: needed only because of how the tables written here work.
     Known before: not that we found; it depends on how BURY and UNBURY are written.
 
 contents  (CALPOL)
     The contents printed for DL 1,14 and DL 1,15 do not name DL 3,1
     DL 1,14 is to be the order to transfer DL 3,1 to TS 6, and DL 1,15 the digit that shows when the last coefficient has been taken. By Fig. 19 the order printed has digits 18, 22 and 23: minor cycle 18 of DL 1. The contents become the instruction L, DL 3,1 and digit 25, which is 0 in DL 3 and 1 in DL 4, where PLUSIND arrives after 32 minor cycles.
+    Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran analysed CALPOL in 1977; we have not seen that paper.
 
 sign  (DISCRIM)
     DISCRIM, as outlined, calls a word zero when its digit 32 is a 1
     The outline subtracts TS 8 from zero and takes TS 5 to be all ones if TS 8 had any digit 1. But digit 32 has reversed sign. A word with a 1 there is a negative number, zero minus it is positive, and TS 5 is all zeros: the same answer as for a word of 32 zeros. The corrected table adds TS 8 as well as subtracting it, and uses either TS 5.
+    Kind: a slip: wrong under any reading of the report.
     Known before: not that we found.
+
+INDEXIN  3 slips, 0 conflicts, 0 ours
+CALPOL   3 slips, 1 conflict, 1 ours
+DISCRIM  1 slip, 0 conflicts, 0 ours
 ```
 
 ## CALPOL

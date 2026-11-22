@@ -175,31 +175,49 @@ those that are ours say so. `ace library NAME` prints one.
 
 ## What running it found
 
+Turing did not offer these tables as finished programs. Section 13 begins:
+"This account must necessarily be very incomplete and crude because the
+whole project as yet exists only in imagination." They were written to show
+a method, for a machine nobody could yet run them on. What follows is what
+happens when they are run anyway.
+
+Not every correction is the same kind of thing, and `ace errata` says which
+each is: a **slip** is wrong under any reading of the report; a
+**conflict** follows one of two things the report says, where the
+simulation takes the other; **ours** is needed only because of how the
+tables written here, which the report describes but does not print, do
+their work.
+
 INDEXIN does not work as printed. It needs three corrections, and leaving
 out any one of them stops it working:
 
-| erratum | problem | known before? |
-|---|---|---|
-| `literal` | Line 1 makes the code of type K, which stores, where type L, which fetches, is meant | Carpenter and Doran (1986), note 17 |
-| `half` | ROTATE 16 moves the code into TS 5; line 5 takes TS 4 | not that we found |
-| `return` | The table ends `B, BURY` instead of `B, UNBURY` | Carpenter and Doran (1986), note 18 |
+| erratum | kind | problem | known before? |
+|---|---|---|---|
+| `literal` | slip | Line 1 makes the code of type K, which stores, where type L, which fetches, is meant | Carpenter and Doran (1986), note 17 |
+| `half` | slip | ROTATE 16 moves the code into TS 5; line 5 takes TS 4. Section 12 settles the direction: rotation is "multiplying the partial sum by a power of 2" | not that we found |
+| `return` | slip | The table ends `B, BURY` instead of `B, UNBURY` | Carpenter and Doran (1986), note 18 |
 
 Fig. 38 prints INDEXIN a second time, as the 13 cards that would be punched
 for it. Three of them do not agree with the table: the card for ADD 'A' also
 sets NOR, the card for OR is the code for AND, and the card for
 `TS 8 - TS 6` is `TS 4 - TS 6`. Run as the cards have it, INDEXIN fails the
-same way.
+same way. The figure was read digit by digit twice, by this project's agent
+and blind by a different model, with the same result on all thirteen rows:
+see [`docs/fig38-read-twice.md`](docs/fig38-read-twice.md). No person has
+checked it yet.
 
-CALPOL as printed never stops. With five corrections it gives the right
-value, called once or twice in a row:
+CALPOL as printed never stops. With five changes it gives the right value,
+called once or twice in a row. Three are slips, one follows the other side
+of a conflict in the report, and one is needed only because of the tables
+written here:
 
-| erratum | problem |
-|---|---|
-| `clear` | Line 1 clears TS 22, 23, the result, not TS 20, 21, the running product: a second call starts from the last product |
-| `inputs` | AND is given its arguments in TS 2 and TS 3; the logical operations read TS 9 and TS 10 |
-| `branch` | The two ways on are made with type Q, which fills only digits 17-32 and so cannot make an instruction; and CALPOL 40 is not the exit |
-| `carry` | After DISCRIM the chosen instruction is in TS 24, not TS 6 (this one depends on how BURY and UNBURY are written) |
-| `contents` | The words printed for DL 1,14 and DL 1,15 do not name DL 3,1 |
+| erratum | kind | problem |
+|---|---|---|
+| `clear` | slip | Line 1 clears TS 22, 23, the result, not TS 20, 21, the running product: a second call starts from the last product |
+| `inputs` | conflict | AND is given its arguments in TS 2 and TS 3, as one sentence of section 12 says; the logical operations of Fig. 29, and INDEXIN, read TS 9 and TS 10 |
+| `branch` | slip | The two ways on are made with type Q, which fills only digits 17-32 and so cannot make an instruction of type B under either reading of Q. Which instruction is the exit, CALPOL 50 rather than 40, is our reading |
+| `carry` | ours | After DISCRIM the chosen instruction is in TS 24, not TS 6. This depends on how BURY and UNBURY, which are ours, are written |
+| `contents` | slip | The words printed for DL 1,14 and DL 1,15 do not name DL 3,1 under Fig. 19's position digits |
 
 Carpenter and Doran published an analysis of CALPOL's errors in 1977 (*The
 other Turing machine*). This project has not been able to read that paper,
@@ -270,13 +288,28 @@ The report and its figures are not in this repository.
 * B. E. Carpenter and R. W. Doran (eds.), *A. M. Turing's ACE Report of 1946
   and Other Papers*, MIT Press, 1986.
 * B. E. Carpenter and R. W. Doran, "The other Turing machine", *The Computer
-  Journal* 20(3), 1977, pp. 269-279.
+  Journal* 20(3), 1977, pp. 269-279. Not read for this project.
+* B. J. Copeland (ed.), *Alan Turing's Automatic Computing Engine*, Oxford
+  University Press, 2005. Not read for this project.
 
 ## Earlier work
 
 There are emulators of the Pilot ACE, starting with Donald Davies's. We
 found no executable reconstruction of the machine of the 1945 report, which
 is not to say there is none.
+
+Running a design that existed only on paper, and finding what it needed, has
+been done before, and this project follows that work. Knuth and Trabb Pardo
+(*The Early Development of Programming Languages*, 1976) wrote one program
+in every early notation and read the results closely. Raúl Rojas and
+colleagues at the Free University of Berlin implemented Zuse's Plankalkül
+from his manuscripts around 2000. Those who have run Ada Lovelace's program
+for the Bernoulli numbers, from Note G of 1843, found an error in it. Doron
+Swade's team built Babbage's Difference Engine No. 2 from his drawings at
+the Science Museum in 1991, and the drawings needed correcting too. Thomas
+Haigh, Mark Priestley and Crispin Rope's *ENIAC in Action* (MIT Press, 2016)
+reconstructs ENIAC's programs from its documents, and is the closest
+scholarly model for what is attempted here.
 
 ## Licence
 

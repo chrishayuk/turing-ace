@@ -258,7 +258,27 @@ fn real_main() -> Result<(), String> {
         }
         "errata" => {
             for e in ERRATA {
-                println!("{}  ({})\n    {}\n    {}\n    Known before: {}.\n", e.id, e.table, e.title, e.detail, e.known);
+                println!(
+                    "{}  ({})\n    {}\n    {}\n    Kind: {}.\n    Known before: {}.\n",
+                    e.id,
+                    e.table,
+                    e.title,
+                    e.detail,
+                    e.kind.describe(),
+                    e.known
+                );
+            }
+            for table in ["INDEXIN", "CALPOL", "DISCRIM"] {
+                let of = |k: ace::Kind| ERRATA.iter().filter(|e| e.table == table && e.kind == k).count();
+                println!(
+                    "{:<8} {} slip{}, {} conflict{}, {} ours",
+                    table,
+                    of(ace::Kind::Slip),
+                    if of(ace::Kind::Slip) == 1 { "" } else { "s" },
+                    of(ace::Kind::Conflict),
+                    if of(ace::Kind::Conflict) == 1 { "" } else { "s" },
+                    of(ace::Kind::Ours)
+                );
             }
             Ok(())
         }
