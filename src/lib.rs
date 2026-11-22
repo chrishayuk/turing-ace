@@ -74,10 +74,12 @@ pub const ERRATA: &[Erratum] = &[
         table: "INDEXIN",
         title: "INDEXIN 5 takes the half of the partial sum the digits have left",
         detail: "Type Q can only fill digits 17-32, so the type digits are made there and moved \
-                 down by ROTATE 16. Section 12 describes rotation as multiplication by a power \
-                 of 2: the digits go 16 places up, out of TS 4 and into digits 1-16 of TS 5. \
-                 Line 5 takes TS 4. It becomes TS 5 - TS 6. (If `forwards` in the report meant \
-                 towards digit 1, the line stands as printed and section 12 is what is wrong.)",
+                 by ROTATE 16, `Rotate the content of TS 4, TS 5 forwards 16 places`. Section 12 \
+                 says which way forwards is: the facility is for `multiplying the partial sum by \
+                 a power of 2`, and consists in `enabling the partial sums to be delayed`. A \
+                 delayed digit comes out later and later digits are more significant, so the \
+                 digits go 16 places up, out of TS 4 and into digits 1-16 of TS 5. Line 5 takes \
+                 TS 4. It becomes TS 5 - TS 6.",
         known: "not that we found",
         edits: &[("5   TS 4 - TS 6 ", "5   TS 5 - TS 6 ")],
     },
