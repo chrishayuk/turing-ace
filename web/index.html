@@ -116,6 +116,13 @@
      its delay lines and temporary storages, its two types of instruction, and his instruction tables written in his
      popular form, <code>TS 6 - TS 2</code>, <code>B, INDEXIN</code>, <code>ADD 'A'</code>. The machine was never built.
      It is the same Rust program as the command line, compiled to WebAssembly.</p>
+  <section id="machine-room" aria-label="The machine">
+    <div id="console"></div>
+    <div class="bar" style="margin-top:8px">
+      <button id="hopper" type="button">Punch the job below and put it in the hopper</button>
+      <span class="dim" id="hopper-note">The machine starts empty and loads the job from its cards, as section 7 of the report describes.</span>
+    </div>
+  </section>
   <div class="bar">
     <select id="examples" aria-label="Jobs and tables"></select>
     <select id="errata" aria-label="Turing's tables">
@@ -215,6 +222,21 @@
 <script type="module">
 const $ = (id) => document.getElementById(id);
 const { examples, timing = [], library } = await (await fetch("examples.json")).json();
+
+// ---- The machine room: the job as a deck, loaded from cold (console.js).
+const { mountConsole } = await import("./console.js");
+const machine = mountConsole(document.getElementById("console"), { speed: new URLSearchParams(location.search).get("speed") || "watch" });
+{
+  const first = examples.find((e) => e.name === "answer") || examples[0];
+  machine.load({ name: first.name, program: first.program, input: first.input || "" });
+}
+document.getElementById("hopper").addEventListener("click", async () => {
+  const note = document.getElementById("hopper-note");
+  note.textContent = "Punching…";
+  const ok = await machine.load({ name: "your job", program: document.getElementById("program").value, input: document.getElementById("input").value });
+  note.textContent = ok ? "In the hopper. Close the switch to start." : "The job has a problem: see the machine above.";
+  document.getElementById("machine-room").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 const wasmUrl = new URL("ace.wasm", location.href).href;
 
 // ---- Running a command of ace.wasm in a worker, so that it can be stopped.

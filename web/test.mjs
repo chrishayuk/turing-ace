@@ -87,5 +87,26 @@ if (!answer.results[2]?.contents.value.includes("**JOB**")) fail("language serve
 const clean = ask(module, fetchJob, [{ method: "textDocument/completion", params: { position: { line: 1, character: 0 } } }]);
 if (clean.diagnostics.length !== 0 || !clean.results[0].some((item) => item.label === "INDEXIN")) fail("language server: completion");
 
+// The machine room (console.js) plays `ace run --json --cold`: from an empty
+// machine, the deck and then the job, punching what a warm run punches.
+{
+  const { listing } = await import("./console.js");
+  for (const name of ["answer", "echo", "gcd"]) {
+    const program = readFileSync(`${root}examples/${name}.ace`, "utf8");
+    const inFile = `${root}examples/${name}.in`;
+    const input = existsSync(inFile) ? readFileSync(inFile, "utf8") : "";
+    const warm = JSON.parse(ace(["run", "-", "--json"], program, input).out);
+    const cold = JSON.parse(ace(["run", "-", "--json", "--cold"], program, input).out);
+    if (!cold.idle || cold.deck < 2 || cold.start.cells.length !== 0) fail(`${name} from cold: ${cold.stop}, deck ${cold.deck}`);
+    if (JSON.stringify(cold.raw) !== JSON.stringify(warm.raw)) fail(`${name} from cold punches something else`);
+    if (cold.start.reader.length < cold.deck) fail(`${name} from cold: the deck is not in the reader`);
+  }
+  const card = Array(12).fill(0);
+  card[1] = 1;      // row 11, column 1: minus
+  card[2] = 2;      // row 0, column 2
+  card[6] = 4;      // row 4, column 3
+  if (listing(card) !== "-04") fail(`console listing ${JSON.stringify(listing(card))}`);
+}
+
 console.log(`${checked} examples checked through WebAssembly, ${failed} failed`);
 process.exit(failed ? 1 : 0);

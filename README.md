@@ -93,6 +93,7 @@ Or try it with nothing installed, in the [playground](https://chrishayuk.com/dem
 
 ```
 ace run FILE [--input N,N,...] [--cards numbers|listing|holes] [--trace] [--time]
+ace deck FILE [--holes]
 ace tables FILE [--emit listing|cards|digits]
 ace library [NAME]
 ace audit
@@ -109,6 +110,20 @@ itself. Numbers given with `--input` go onto cards in the reader, twelve to
 a card; punched cards come out as twelve numbers, as the line a tabulator
 would list, or as rows of holes. `--trace` prints every instruction obeyed
 with the minor cycle it was found in, and `--time` the machine time.
+
+`deck` turns a job into the cards that load it into an empty machine, and
+`run --cold` starts from them. The report says the machine starts with an
+initial order of "0 throughout", which reads a card into DL 0, and that "the
+first few orders obeyed will probably be to take in a few more cards". Each
+card of the deck carries two words and the orders that put them in place;
+that format is ours. Loading takes far longer than running:
+
+```
+$ ace run examples/answer.ace --cold --time
+ 000000042
+127 cards of the deck read from cold
+2429 instructions in 2441073 minor cycles: 78.1 seconds of machine time
+```
 
 `tables` shows the machine form, and `--emit cards` the 80-column instruction
 cards of section 7: popular name, detail figure, instruction, repeat of
@@ -227,7 +242,15 @@ runs them all and compares.
 ## Playground
 
 `web/` runs the same program in a browser, compiled unchanged for WASI
-(`wasm32-wasip1`).
+(`wasm32-wasip1`). It opens on the machine room (`web/console.js`): the job
+as a deck in the card reader's hopper, a starting switch, the mercury delay
+lines with the job going round in them, CD, CI and the temporary storages as
+lamps, and the punch and the tabulator's listing. Close the switch and the
+empty machine reads its first card with the order of zeros, loads the rest,
+and runs. It can be watched slowed down or at the machine's own speed, at
+which loading a job takes over a minute. Every detail it shows is quoted
+from the report at the top of the file, and what is not from the report is
+said so.
 
 ```
 node web/build.mjs                  # builds web/ace.wasm and web/examples.json
