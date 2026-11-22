@@ -20,6 +20,9 @@ usage:
         the line a tabulator would list, or as rows of holes.
         --trace prints every instruction obeyed, with the minor cycle it
         was found in. --time prints the machine time taken.
+        --json prints the whole run as one JSON object instead: the
+        machine before the start, every instruction obeyed with what it
+        changed, and the cards. The playground steps through it.
         FILE may be `-`: standard input is then the tables, a line `----`,
         and the numbers.
   ace tables FILE [--emit listing|cards|digits] [--errata LIST]
@@ -164,10 +167,13 @@ fn real_main() -> Result<(), String> {
                 Some(n) => n.parse::<u64>().map_err(|_| format!("--limit {} is not a number", n))?,
                 None => STEP_LIMIT,
             };
-            let (trace, timed) = (args.flag("--trace"), args.flag("--time"));
+            let (trace, timed, json) = (args.flag("--trace"), args.flag("--time"), args.flag("--json"));
             let unit = job(&args)?;
             let how = cards.or(unit.cards.clone()).unwrap_or("numbers".into());
             show_card(&[0; 12], &how)?;
+            if json {
+                return run_json(&unit, &input, limit, &how);
+            }
             let mut m = load(&unit, &input)?;
             let mut shown = 0;
             let stop = run(&mut m, limit, |m, e| {
@@ -329,3 +335,110 @@ fn tables(unit: &Unit, emit: &str) -> Result<(), String> {
     Ok(())
 }
 
+
+/// The run as JSON, for a page that steps through it.
+///
+/// `start` is the machine before the first instruction: the non-zero minor
+/// cycles of the delay lines as [line, slot, word] and TS 1 to TS 32. Each
+/// step is [began, fetched, done, cd, ci, form, ts, cells, cards]: the minor
+/// cycle the search for the instruction began, the one it reached CI in, the
+/// one after it finished; CD and CI; an index into `forms`, its popular form;
+/// the temporary storages that changed as [n, word]; the minor cycles that
+/// changed as [line, slot, word]; and how many cards had been punched.
+fn run_json(unit: &Unit, input: &[u32], limit: u64, how: &str) -> Result<(), String> {
+    use std::collections::HashMap;
+    use std::fmt::Write;
+    let mut m = load(unit, input)?;
+    let mut out = String::from("{\"start\":{\"cells\":[");
+    let mut first = true;
+    for (dl, line) in m.lines.iter().enumerate() {
+        for (slot, w) in line.iter().enumerate() {
+            if *w != 0 {
+                let _ = write!(out, "{}[{},{},{}]", if first { "" } else { "," }, dl, slot, w);
+                first = false;
+            }
+        }
+    }
+    let ts: Vec<String> = m.ts[1..].iter().map(|w| w.to_string()).collect();
+    let _ = write!(out, "],\"ts\":[{}],\"cd\":{}}},\"names\":[", ts.join(","), m.cd);
+    let mut first = true;
+    for t in &unit.tables {
+        for slot in &t.slots {
+            let _ = write!(out, "{}[{},{},{}]", if first { "" } else { "," }, slot.pos.dl, slot.pos.slot, quote(&format!("{} {}", t.name, slot.fig)));
+            first = false;
+        }
+    }
+    out.push_str("],\"steps\":[");
+    let mut forms: Vec<String> = Vec::new();
+    let mut index: HashMap<u32, usize> = HashMap::new();
+    let mut steps: Vec<String> = Vec::new();
+    let stop = loop {
+        if m.steps >= limit {
+            break Stop::Limit;
+        }
+        let (began, ts_before) = (m.time, m.ts);
+        let event = match m.step() {
+            Ok(e) => e,
+            Err(stop) => break stop,
+        };
+        let form = *index.entry(event.ci).or_insert_with(|| {
+            forms.push(unit.popular(event.ci));
+            forms.len() - 1
+        });
+        let changed: Vec<String> =
+            (1..=32).filter(|n| m.ts[*n] != ts_before[*n]).map(|n| format!("[{},{}]", n, m.ts[n])).collect();
+        // Only types K and P write to the delay lines.
+        let mut cells = Vec::new();
+        if !ace::word::digit(event.ci, 3) {
+            match ace::machine::Type::of(event.ci) {
+                Some(ace::machine::Type::K) => {
+                    let at = Pos::of(event.ci);
+                    cells.push(format!("[{},{},{}]", at.dl, at.slot, m.ts[6]));
+                }
+                Some(ace::machine::Type::P) => {
+                    let dl = Pos::of(event.ci).dl as usize;
+                    for slot in 0..12 {
+                        cells.push(format!("[{},{},{}]", dl, slot, m.lines[dl][slot]));
+                    }
+                }
+                _ => {}
+            }
+        }
+        steps.push(format!(
+            "[{},{},{},{},{},{},[{}],[{}],{}]",
+            began,
+            event.fetched,
+            event.done,
+            event.cd,
+            event.ci,
+            form,
+            changed.join(","),
+            cells.join(","),
+            m.punched.len()
+        ));
+    };
+    out.push_str(&steps.join(","));
+    let forms: Vec<String> = forms.iter().map(|f| quote(f)).collect();
+    let cards: Vec<String> = m.punched.iter().map(|c| quote(&show_card(c, how).unwrap())).collect();
+    let raw: Vec<String> = m.punched.iter().map(|c| format!("[{}]", c.iter().map(|w| w.to_string()).collect::<Vec<_>>().join(","))).collect();
+    let _ = write!(
+        out,
+        "],\"forms\":[{}],\"cards\":[{}],\"raw\":[{}],\"stop\":{},\"idle\":{},\"at\":{},\"time\":{},\"count\":{}}}",
+        forms.join(","),
+        cards.join(","),
+        raw.join(","),
+        quote(&stop.to_string()),
+        matches!(stop, Stop::Idle(_)),
+        quote(&place(unit, m.cd)),
+        m.time,
+        m.steps
+    );
+    println!("{}", out);
+    Ok(())
+}
+
+fn quote(s: &str) -> String {
+    let mut out = String::new();
+    ace::json::Json::Str(s.to_string()).write(&mut out);
+    out
+}

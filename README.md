@@ -73,10 +73,11 @@ ace run examples/gcd.ace --input 1071,462
 ace run examples/polynomial.ace --time
 ```
 
-For Visual Studio Code, install `turing-ace-language-0.1.0.vsix` from
-[`editors/vscode`](editors/vscode):
+For Visual Studio Code, build the extension in
+[`editors/vscode`](editors/vscode) and install it (you need Node.js):
 
 ```
+cd editors/vscode && npm install && npm run package
 code --install-extension turing-ace-language-0.1.0.vsix
 ```
 

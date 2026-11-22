@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turing's ACE</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f2f0eb; --fg: #0b0b0b; --rule: #b8b6b1; --soft: #e6e3dc; --accent: #b5651d; --err: #a3432f; --ok: #3d7a4a;
+    --word: #2f7fb8; --code: #c96a14; --head: #a3432f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0b; --fg: #fafaf8; --rule: #4a4844; --soft: #1d1c1a; --err: #e07a62; --ok: #7cc28a; --word: #6fb0e0; --code: #e69a4c; --head: #e07a62; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 1180px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font: 500 2.2rem/1.1 Georgia, serif; margin: 0 0 8px; }
+  p { max-width: 70ch; opacity: .8; margin: 0 0 20px; }
+  code { font: .9em ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+  .voice, label.voice { display: block; font: 12px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; opacity: .65; margin: 0 0 4px; }
+  label.check { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-size: 14px; }
+  textarea, pre, select, button, input[type=range] { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: inherit; }
+  textarea, pre { width: 100%; margin: 0; padding: 12px; background: transparent; border: 1px solid var(--rule); border-radius: 0; }
+  textarea { resize: vertical; tab-size: 2; }
+  #input { height: 60px; }
+  pre.out { height: 460px; overflow: auto; white-space: pre; }
+  select, button { padding: 6px 12px; background: var(--bg); border: 1px solid var(--fg); border-radius: 0; cursor: pointer; max-width: 100%; }
+  button.primary { background: var(--fg); color: var(--bg); }
+  button:disabled { opacity: .35; cursor: default; }
+  .err { color: var(--err); }
+  .ok { color: var(--ok); }
+  .dim { opacity: .6; }
+  #status { font: 12px ui-monospace, monospace; opacity: .7; }
+  #note { font-size: 14px; min-height: 1.5em; margin: 0 0 8px; opacity: .8; max-width: none; }
+
+  /* The editor: a coloured copy of the text lies under a see-through text box. */
+  .editor { position: relative; height: 420px; border: 1px solid var(--rule); }
+  .editor pre, .editor textarea { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 12px; border: 0; white-space: pre; overflow: auto; word-break: normal; tab-size: 2; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .editor pre { pointer-events: none; overflow: hidden; }
+  .editor textarea { resize: none; background: transparent; color: transparent; caret-color: var(--fg); outline-offset: -1px; }
+  .editor textarea::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  .t-comment { opacity: .55; font-style: italic; }
+  .t-number { color: var(--word); }
+  .t-function { color: var(--code); font-weight: 600; }
+  .t-variable { color: color-mix(in srgb, #a0489a 75%, currentColor); }
+  .t-keyword { color: color-mix(in srgb, #b8323a 70%, currentColor); font-weight: 600; }
+  .t-macro { color: color-mix(in srgb, #3d7a4a 80%, currentColor); }
+  .t-property { opacity: .55; }
+  .t-string { color: color-mix(in srgb, #b8323a 70%, currentColor); }
+  .t-operator { opacity: .75; }
+  .p-warning { text-decoration: underline wavy #c98a14; text-decoration-skip-ink: none; }
+  .p-error { text-decoration: underline wavy var(--err); text-decoration-skip-ink: none; }
+  #problems { list-style: none; margin: 6px 0 0; padding: 0; max-height: 84px; overflow: auto; font: 12px/1.5 ui-monospace, monospace; }
+  #problems li { cursor: pointer; padding: 1px 0; }
+  #problems li.error { color: var(--err); }
+  #tip { position: fixed; z-index: 10; display: none; max-width: min(520px, 90vw); max-height: 70vh; overflow: auto; padding: 8px 12px; background: #fbf9f3; color: #22251f; border: 1px solid #22251f55; box-shadow: 0 6px 24px #0003; font: 13px/1.5 system-ui, sans-serif; }
+  #tip p { margin: 0 0 6px; max-width: none; opacity: 1; }
+  #tip hr { border: 0; border-top: 1px solid #22251f33; margin: 6px 0; }
+  #tip pre, #tip code { font: 12px/1.5 ui-monospace, Menlo, monospace; background: #22251f14; padding: 1px 4px; }
+  #tip pre { height: auto; margin: 0 0 6px; padding: 6px 8px; border: 0; white-space: pre; overflow: auto; }
+
+  /* Tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 0; margin-bottom: 10px; border-bottom: 1px solid var(--rule); }
+  .tabs button { border: 0; border-bottom: 2px solid transparent; background: none; padding: 6px 12px; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; opacity: .65; }
+  .tabs button[aria-selected=true] { border-bottom-color: var(--fg); opacity: 1; }
+  .panel[hidden] { display: none; }
+
+  /* Step through */
+  .controls { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+  .controls button { padding: 4px 10px; }
+  #scrub { flex: 1 1 160px; min-width: 120px; }
+  .clock { font: 13px ui-monospace, monospace; margin: 0 0 8px; }
+  .clock b { font-size: 18px; }
+  .lc { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; font: 12px/1.5 ui-monospace, monospace; margin-bottom: 10px; overflow-x: auto; }
+  .lc .k { opacity: .6; }
+  .lc .bits { white-space: nowrap; }
+  .story { font-size: 14px; margin: 0 0 10px; max-width: none; opacity: .9; min-height: 3em; }
+  .rings { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  .ring { text-align: center; font: 12px ui-monospace, monospace; }
+  .ring svg { width: 100%; max-width: 200px; height: auto; display: block; margin: 0 auto; }
+  .ring .spin { transition-property: transform; transition-timing-function: linear; transform-origin: 100px 100px; }
+  .strips { font: 10px ui-monospace, monospace; margin-bottom: 10px; overflow-x: auto; }
+  .strip { display: grid; grid-template-columns: 52px repeat(32, minmax(6px, 1fr)); gap: 1px; align-items: center; }
+  .strip i { display: block; height: 10px; background: var(--soft); }
+  .strip i.w { background: color-mix(in srgb, var(--word) 45%, var(--soft)); }
+  .strip i.c { background: color-mix(in srgb, var(--code) 35%, var(--soft)); }
+  .strip i.head { outline: 1px solid var(--fg); }
+  .strip i.got { background: var(--ok); }
+  .strip i.op { background: var(--accent); }
+  .ts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-bottom: 10px; }
+  @media (max-width: 520px) { .ts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .ts div { border: 1px solid var(--rule); padding: 3px 5px; font: 11px/1.35 ui-monospace, monospace; min-width: 0; }
+  .ts div.changed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .ts b { font-weight: 600; }
+  .ts .dots { display: grid; grid-template-columns: repeat(32, 1fr); gap: 1px; margin-top: 2px; }
+  .ts .dots span { height: 4px; background: var(--soft); }
+  .ts .dots span.on { background: var(--fg); }
+  .budget { display: flex; height: 14px; margin: 4px 0; border: 1px solid var(--rule); }
+  .budget span { display: block; height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 11px ui-monospace, monospace; }
+  .legend i { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+  .both { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .both { grid-template-columns: 1fr; } }
+  .both pre { height: 200px; overflow: auto; white-space: pre; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Turing's ACE, as proposed in 1945</h1>
+  <p>The Automatic Computing Engine of Alan Turing's report <i>Proposed Electronic Calculator</i>, run in your browser:
+     its delay lines and temporary storages, its two types of instruction, and his instruction tables written in his
+     popular form, <code>TS 6 - TS 2</code>, <code>B, INDEXIN</code>, <code>ADD 'A'</code>. The machine was never built.
+     It is the same Rust program as the command line, compiled to WebAssembly.</p>
+  <div class="bar">
+    <select id="examples" aria-label="Jobs and tables"></select>
+    <select id="errata" aria-label="Turing's tables">
+      <option value="all">Turing's tables, corrected</option>
+      <option value="none">Turing's tables as printed</option>
+    </select>
+    <button id="run" class="primary">Run</button>
+    <button id="stop" disabled>Stop</button>
+    <span id="status" aria-live="polite"></span>
+  </div>
+  <p id="note"></p>
+  <div class="grid">
+    <div>
+      <span class="voice">01 / The job <span class="dim">/ rest the pointer on any instruction</span></span>
+      <div class="editor"><pre id="paint" aria-hidden="true"></pre><textarea id="program" aria-label="The job" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off"></textarea></div>
+      <ul id="problems" aria-live="polite" aria-label="Problems"></ul>
+      <div class="bar" style="margin-top:8px"><button id="format" type="button">Set out in columns</button></div>
+      <label for="input" class="voice">02 / Cards in the reader <span class="dim">/ numbers, twelve to a card</span></label>
+      <textarea id="input" spellcheck="false"></textarea>
+    </div>
+    <div>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="cards" aria-selected="true">Cards punched</button>
+        <button role="tab" data-tab="step" aria-selected="false">Step through</button>
+        <button role="tab" data-tab="form" aria-selected="false">Machine form</button>
+        <button role="tab" data-tab="audit" aria-selected="false">Audit</button>
+      </div>
+
+      <section class="panel" data-panel="cards">
+        <div class="bar">
+          <label class="check">Cards shown as
+            <select id="cards">
+              <option value="">the job says</option>
+              <option value="numbers">numbers</option>
+              <option value="listing">a tabulator listing</option>
+              <option value="holes">holes</option>
+            </select></label>
+        </div>
+        <pre id="output" class="out" aria-live="polite"></pre>
+      </section>
+
+      <section class="panel" data-panel="step" hidden>
+        <div class="controls">
+          <button id="s-start" type="button" title="Back to the start">|&lt;</button>
+          <button id="s-back" type="button" title="One instruction back">&lt;</button>
+          <button id="s-play" type="button" class="primary">Play</button>
+          <button id="s-next" type="button" title="One instruction on">&gt;</button>
+          <select id="s-speed" aria-label="Speed">
+            <option value="600">slow</option>
+            <option value="160" selected>steady</option>
+            <option value="30">fast</option>
+            <option value="1">fastest</option>
+          </select>
+          <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Instruction">
+        </div>
+        <p class="clock" id="clock">Press Run, or Play, to start.</p>
+        <div class="lc" id="lc"></div>
+        <p class="story" id="story"></p>
+        <span class="voice">The delay lines read from <span class="dim">/ each turns once a millisecond</span></span>
+        <div class="rings" id="rings"></div>
+        <span class="voice">Every delay line in use <span class="dim">/ the outlined column is passing the reading end now</span></span>
+        <div class="strips" id="strips"></div>
+        <span class="voice">Temporary storages TS 1 to TS 32</span>
+        <div class="ts" id="ts"></div>
+        <span class="voice">Where the machine's time went</span>
+        <div class="budget" id="budget"></div>
+        <div class="legend" id="legend"></div>
+      </section>
+
+      <section class="panel" data-panel="form" hidden>
+        <div class="bar">
+          <select id="emit" aria-label="Form">
+            <option value="listing">Each instruction: position, 32 digits, popular form</option>
+            <option value="cards">As 80-column instruction cards (section 7)</option>
+          </select>
+          <button id="show-form" type="button">Show</button>
+        </div>
+        <pre id="form" class="out"></pre>
+      </section>
+
+      <section class="panel" data-panel="audit" hidden>
+        <p style="font-size:14px">The report compared with itself. Fig. 38 shows INDEXIN a second time, as the cards that would be
+          punched. Below that, the tables Turing printed or described are run on the machine, as printed and corrected.</p>
+        <div class="bar"><button id="audit-run" type="button" class="primary">Run the audit</button></div>
+        <pre id="audit" class="out" style="height:380px"></pre>
+        <span class="voice" style="margin-top:14px">This job, both ways</span>
+        <div class="bar"><button id="both" type="button">Run with the tables as printed and as corrected</button></div>
+        <div class="both">
+          <div><span class="voice">As printed in 1945</span><pre id="both-none"></pre></div>
+          <div><span class="voice">Corrected</span><pre id="both-all"></pre></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+<div id="tip" role="tooltip"></div>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const { examples, timing = [], library } = await (await fetch("examples.json")).json();
+const wasmUrl = new URL("ace.wasm", location.href).href;
+
+// ---- Running a command of ace.wasm in a worker, so that it can be stopped.
+function command(args, { program = "", input = "", limit, onOut } = {}) {
+  let worker = new Worker("worker.js", { type: "module" });
+  let out = "", err = "";
+  const done = new Promise((resolve) => {
+    const end = (code, message) => { worker?.terminate(); worker = null; resolve({ code, out, err: err + (message || "") }); };
+    worker.onmessage = ({ data }) => {
+      if (data.type === "out") { if (data.fd === 1) out += data.text; else err += data.text; onOut?.(data); }
+      else if (data.type === "error") end(-1, data.message);
+      else end(data.code);
+    };
+    worker.onerror = (event) => end(-1, event.message);
+  });
+  worker.postMessage({ wasmUrl, args, program, input, limit });
+  return { done, stop: () => worker?.terminate() };
+}
+const errataArgs = () => ["--errata", $("errata").value];
+
+// ---- The list of jobs and tables.
+const jobs = document.createElement("optgroup");
+jobs.label = "Jobs";
+for (const example of examples) jobs.append(new Option(example.name, "job:" + example.name));
+const waits = document.createElement("optgroup");
+waits.label = "Waiting for the delay lines";
+for (const example of timing) waits.append(new Option(`${example.name}: four fetches, ${example.name === "placed" ? "in time" : "just missed"}`, "time:" + example.name));
+const tables = document.createElement("optgroup");
+tables.label = "Turing's tables, from the library";
+for (const table of library) tables.append(new Option(`${table.name}${table.printed ? " (printed in 1945)" : " (described; table ours)"}`, "lib:" + table.name));
+$("examples").append(jobs, ...(timing.length ? [waits] : []), tables);
+
+async function choose() {
+  const [kind, name] = $("examples").value.split(":");
+  $("output").textContent = "";
+  if (kind === "job" || kind === "time") {
+    const example = (kind === "job" ? examples : timing).find((e) => e.name === name);
+    $("program").value = example.program;
+    $("input").value = example.input;
+    $("note").textContent = kind === "time"
+      ? "The same four fetches in both jobs. Step through each and watch the rings: a word that has just gone by costs a whole turn of the delay line, and while the machine waits for it the next instruction goes by too. Run both and compare the machine time."
+      : "";
+  } else {
+    const entry = library.find((t) => t.name === name);
+    const { out } = await command(["library", name, ...errataArgs()]).done;
+    $("program").value = out;
+    $("input").value = "";
+    $("note").textContent = (entry.printed ? "A table Turing printed. " : "Turing describes this table; the table is ours. ")
+      + "A job uses it by naming it: B, BURY; B, " + name + ". "
+      + ($("errata").value === "none" ? "Shown as printed." : "Shown corrected; choose “as printed” to see the original.");
+  }
+  trace = null;
+  showStep();
+  changed();
+}
+$("examples").onchange = choose;
+$("errata").onchange = () => { if ($("examples").value.startsWith("lib:")) choose(); };
+
+// ---- The editor. Colours, problems and hover help come from the language
+// server, `ace lsp`, a command of the same ace.wasm, run in lsp-worker.js.
+const TYPES = ["comment", "keyword", "function", "variable", "number", "operator", "string", "macro", "property"];
+let server = null, asked = 0;
+const waiting = new Map();
+function ask(text, requests) {
+  if (!server) {
+    server = new Worker("lsp-worker.js", { type: "module" });
+    server.onmessage = ({ data }) => { waiting.get(data.id)?.(data.error ? null : data); waiting.delete(data.id); };
+    server.onerror = () => { for (const resolve of waiting.values()) resolve(null); waiting.clear(); };
+  }
+  const id = ++asked;
+  return new Promise((resolve) => { waiting.set(id, resolve); server.postMessage({ id, wasmUrl, text, requests }); });
+}
+
+function paint(text, tokens = [], problems = []) {
+  const lines = text.split("\n");
+  const kind = lines.map((line) => new Array(line.length).fill(""));
+  const mark = lines.map((line) => new Array(line.length).fill(""));
+  let row = 0, col = 0;
+  for (let i = 0; i + 4 < tokens.length; i += 5) {
+    row += tokens[i];
+    col = tokens[i] ? tokens[i + 1] : col + tokens[i + 1];
+    for (let c = col; c < col + tokens[i + 2] && kind[row] && c < kind[row].length; c++) kind[row][c] = TYPES[tokens[i + 3]];
+  }
+  for (const problem of problems) {
+    const { start, end } = problem.range;
+    const last = end.line === start.line ? Math.max(end.character, start.character + 1) : (mark[start.line]?.length ?? 0);
+    for (let c = start.character; c < last && mark[start.line] && c < mark[start.line].length; c++) {
+      if (mark[start.line][c] !== "error") mark[start.line][c] = problem.severity === 1 ? "error" : "warning";
+    }
+  }
+  const out = document.createDocumentFragment();
+  lines.forEach((line, n) => {
+    const element = document.createElement("div");
+    for (let from = 0; from < line.length; ) {
+      let to = from + 1;
+      while (to < line.length && kind[n][to] === kind[n][from] && mark[n][to] === mark[n][from]) to++;
+      const span = document.createElement("span");
+      span.textContent = line.slice(from, to);
+      span.className = [kind[n][from] && `t-${kind[n][from]}`, mark[n][from] && `p-${mark[n][from]}`].filter(Boolean).join(" ");
+      element.append(span);
+      from = to;
+    }
+    if (!line.length) element.textContent = "​";
+    out.append(element);
+  });
+  $("paint").replaceChildren(out);
+  $("paint").scrollTop = $("program").scrollTop;
+  $("paint").scrollLeft = $("program").scrollLeft;
+}
+
+let timer = 0;
+async function check() {
+  const text = $("program").value;
+  const answer = await ask(text, [{ method: "textDocument/semanticTokens/full" }]);
+  if (!answer || $("program").value !== text) return;
+  paint(text, answer.results[0]?.data || [], answer.diagnostics);
+  $("problems").replaceChildren(...answer.diagnostics.map((problem) => {
+    const item = document.createElement("li");
+    item.className = problem.severity === 1 ? "error" : "warning";
+    item.textContent = `line ${problem.range.start.line + 1}: ${problem.message}`;
+    item.onclick = () => {
+      const before = text.split("\n").slice(0, problem.range.start.line).reduce((n, line) => n + line.length + 1, 0);
+      $("program").focus();
+      $("program").setSelectionRange(before + problem.range.start.character, before + problem.range.end.character);
+    };
+    return item;
+  }));
+}
+function changed() {
+  hideTip();
+  paint($("program").value);
+  clearTimeout(timer);
+  timer = setTimeout(check, 120);
+}
+$("program").addEventListener("input", () => { trace = null; changed(); });
+$("program").addEventListener("scroll", () => {
+  $("paint").scrollTop = $("program").scrollTop;
+  $("paint").scrollLeft = $("program").scrollLeft;
+  hideTip();
+});
+$("program").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); runCards(); }
+  if (event.key === "Tab" && !event.shiftKey) {
+    event.preventDefault();
+    $("program").setRangeText("   ", $("program").selectionStart, $("program").selectionEnd, "end");
+    changed();
+  }
+});
+$("format").onclick = async () => {
+  const text = $("program").value;
+  const answer = await ask(text, [{ method: "textDocument/formatting", params: { options: { tabSize: 2, insertSpaces: true } } }]);
+  const edit = answer?.results[0]?.[0];
+  if (edit && $("program").value === text) { $("program").value = edit.newText; changed(); }
+};
+
+// Hover help, found in the coloured copy, which has the same text in the same place.
+function placeAt(x, y) {
+  const rows = $("paint").children;
+  for (let line = 0; line < rows.length; line++) {
+    const box = rows[line].getBoundingClientRect();
+    if (y < box.top || y >= box.bottom) continue;
+    const range = document.createRange();
+    let character = 0;
+    for (const span of rows[line].children) {
+      const node = span.firstChild;
+      for (let i = 0; i < node.length; i++, character++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const letter = range.getBoundingClientRect();
+        if (x >= letter.left && x < letter.right) return { line, character };
+      }
+    }
+    return null;
+  }
+  return null;
+}
+function inline(element, text) {
+  for (const piece of text.split(/(`[^`]+`|\*\*[^*]+\*\*)/)) {
+    if (piece.startsWith("`")) { const code = document.createElement("code"); code.textContent = piece.slice(1, -1); element.append(code); }
+    else if (piece.startsWith("**")) { const b = document.createElement("b"); b.textContent = piece.slice(2, -2); element.append(b); }
+    else if (piece) {
+      const parts = piece.split("  \n");
+      parts.forEach((part, i) => { element.append(part); if (i < parts.length - 1) element.append(document.createElement("br")); });
+    }
+  }
+}
+function render(markdown) {
+  const tip = $("tip");
+  tip.replaceChildren();
+  for (const block of markdown.split(/\n{2,}/)) {
+    const trimmed = block.trim();
+    if (!trimmed) continue;
+    if (trimmed === "---") { tip.append(document.createElement("hr")); continue; }
+    const fence = /^```\w*\n([\s\S]*?)\n?```$/.exec(trimmed);
+    const element = document.createElement(fence ? "pre" : "p");
+    if (fence) element.textContent = fence[1];
+    else inline(element, trimmed);
+    tip.append(element);
+  }
+}
+let hovering = 0;
+function hideTip() { clearTimeout(hovering); $("tip").style.display = "none"; }
+$("program").addEventListener("mouseleave", hideTip);
+$("program").addEventListener("mousemove", (event) => {
+  hideTip();
+  const { clientX: x, clientY: y } = event;
+  hovering = setTimeout(async () => {
+    const position = placeAt(x, y);
+    if (!position) return;
+    const text = $("program").value;
+    const answer = await ask(text, [{ method: "textDocument/hover", params: { position } }]);
+    const found = answer?.results[0];
+    if (!found || $("program").value !== text) return;
+    render(found.contents.value);
+    const tip = $("tip");
+    tip.style.display = "block";
+    tip.style.left = `${Math.max(4, Math.min(x, innerWidth - tip.offsetWidth - 8))}px`;
+    tip.style.top = `${y + 18 + tip.offsetHeight > innerHeight ? Math.max(4, y - tip.offsetHeight - 10) : y + 18}px`;
+  }, 250);
+});
+
+// ---- Tabs.
+let tab = "cards";
+for (const button of document.querySelectorAll(".tabs button")) {
+  button.onclick = () => {
+    tab = button.dataset.tab;
+    for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b === button));
+    for (const panel of document.querySelectorAll(".panel")) panel.hidden = panel.dataset.panel !== tab;
+    if (tab === "step" && !trace) runStep();
+    if (tab === "form") showForm();
+  };
+}
+
+// ---- Run, and show the cards.
+let current = null;
+const busy = (on, message = "") => {
+  $("run").disabled = on;
+  $("stop").disabled = !on;
+  $("status").textContent = message;
+};
+$("stop").onclick = () => { current?.stop(); current = null; stopPlay(); busy(false, "stopped"); };
+const print = (text, cls) => {
+  const span = document.createElement("span");
+  span.textContent = text;
+  if (cls) span.className = cls;
+  $("output").append(span);
+  $("output").scrollTop = $("output").scrollHeight;
+};
+async function runCards() {
+  current?.stop();
+  $("output").textContent = "";
+  busy(true, "running");
+  const started = performance.now();
+  const cards = $("cards").value ? ["--cards", $("cards").value] : [];
+  current = command(["run", "-", "--time", ...cards, ...errataArgs()], {
+    program: $("program").value, input: $("input").value,
+    onOut: (data) => print(data.text, data.fd === 2 ? "err" : ""),
+  });
+  const { code } = await current.done;
+  current = null;
+  // The last line is the machine time; it reads better apart from the cards.
+  const spans = [...$("output").children];
+  const text = spans.map((s) => s.textContent).join("");
+  const time = /^(\d+ instructions in \d+ minor cycles: .*)$/m.exec(text);
+  if (time) {
+    $("output").replaceChildren();
+    const [cardsText, rest] = [text.slice(0, time.index), text.slice(time.index + time[0].length)];
+    print(cardsText || "(no cards punched)\n", cardsText ? "" : "dim");
+    print("\n" + time[1] + "\n", "dim");
+    if (rest.trim()) print(rest, "err");
+  }
+  busy(false, `${code === 0 ? "finished" : code === -1 ? "stopped" : "stopped with a fault"} in ${Math.round(performance.now() - started)} ms of your time`);
+}
+$("run").onclick = () => {
+  if (tab === "step") runStep();
+  else if (tab === "form") showForm();
+  else if (tab === "audit") runAudit();
+  else runCards();
+};
+
+// ---- Machine form.
+async function showForm() {
+  const { out, err } = await command(["tables", "-", "--emit", $("emit").value, ...errataArgs()], { program: $("program").value }).done;
+  $("form").textContent = out || err;
+  $("form").className = out ? "out" : "out err";
+}
+$("show-form").onclick = showForm;
+$("emit").onchange = showForm;
+
+// ---- Audit.
+function colour(pre, text) {
+  pre.replaceChildren(...text.split("\n").map((line) => {
+    const span = document.createElement("span");
+    span.textContent = line + "\n";
+    if (/DIFFERS|FAILS|WRONG|never stops|waits for a card/.test(line)) span.className = "err";
+    else if (/agrees|works|\b334\b\s+334/.test(line)) span.className = "ok";
+    return span;
+  }));
+}
+async function runAudit() {
+  busy(true, "auditing");
+  $("audit").textContent = "";
+  const { out, err } = await command(["audit"]).done;
+  colour($("audit"), out + err);
+  busy(false, "");
+}
+$("audit-run").onclick = runAudit;
+$("both").onclick = async () => {
+  for (const errata of ["none", "all"]) {
+    const pre = $(`both-${errata}`);
+    pre.textContent = "running";
+    const { code, out, err } = await command(["run", "-", "--time", "--limit", "300000", "--errata", errata], { program: $("program").value, input: $("input").value }).done;
+    pre.textContent = "";
+    pre.append(out);
+    if (code !== 0) { const span = document.createElement("span"); span.className = "err"; span.textContent = err.replace(/^ace: /, ""); pre.append(span); }
+  }
+};
+
+// ---- Step through. The run comes back as JSON (ace run --json): the
+// machine before the start and what each instruction changed. The page
+// replays it to any point.
+const STEP_LIMIT = 60000;
+let trace = null;     // the JSON, and the state replayed to `at`
+let at = 0;           // instructions obeyed so far
+let playing = 0;
+let angle = new Map(); // ring line -> cumulative angle, so rings only turn forwards
+
+const p = (k) => 2 ** (k - 1);
+const digit = (w, k) => Math.floor(w / p(k)) % 2 === 1;
+const bits = (w) => { let s = ""; for (let k = 1; k <= 32; k++) { if (k > 1 && k % 4 === 1) s += ","; s += digit(w, k) ? "1" : "0"; } return s; };
+const posOf = (w) => ({ dl: Math.floor(w / p(23)) % 1024, slot: Math.floor(w / p(18)) % 32 });
+const signed = (w) => (w | 0);
+const CODES = { "0100": "K", "0101": "L", "0010": "M", "0011": "N", "0001": "O", "0000": "P", "0110": "Q", "0111": "R", "1000": "S", "1001": "T" };
+const typeOf = (ci) => digit(ci, 3) ? "B" : (CODES[[5, 6, 7, 8].map((k) => (digit(ci, k) ? "1" : "0")).join("")] || "?");
+const fromTs6 = (cd) => digit(cd, 17);
+const name = (dl, slot) => trace?.names.get(dl * 32 + slot) || `DL ${dl},${slot + 1}`;
+const us = (cycles) => `${(cycles * 32).toLocaleString()} µs`;
+const DUTY = { 1: "the position left by the last B", 2: "added into the partial sum", 3: "the multiplier", 4: "partial sum, lower half", 5: "partial sum, upper half",
+  6: "the shunting station", 7: "places to rotate", 8: "result of a logical operation", 9: "logical input", 10: "logical input",
+  13: "BINDEC's number", 15: "DISCRIM: if any 1", 16: "DISCRIM: if none", 24: "DISCRIM's choice", 25: "CALPOL's result", 27: "INDEXIN: where", 28: "INDEXIN: what", 31: "BURY: next note" };
+
+async function runStep() {
+  stopPlay();
+  current?.stop();
+  busy(true, "running");
+  $("clock").textContent = "Running the job…";
+  current = command(["run", "-", "--json", "--limit", String(STEP_LIMIT), ...errataArgs()], { program: $("program").value, input: $("input").value, limit: 80_000_000 });
+  const { code, out, err } = await current.done;
+  current = null;
+  busy(false, "");
+  if (!out.trim()) { trace = null; $("clock").textContent = ""; $("story").textContent = err.replace(/^ace: /, ""); $("story").className = "story err"; return; }
+  const data = JSON.parse(out);
+  data.names = new Map(data.names.map(([dl, slot, n]) => [dl * 32 + slot, n]));
+  // Which delay lines hold tables (every other minor cycle) and which numbers.
+  data.lines = [...new Set([...data.start.cells.map((c) => c[0]), ...data.steps.flatMap((s) => s[7].map((c) => c[0]))])].sort((a, b) => a - b);
+  data.code = new Set([...data.names.keys()]);
+  // Checkpoints every 500 instructions, so that going back is quick.
+  data.marks = [];
+  const state = { ts: [0, ...data.start.ts], cells: new Map(data.start.cells.map(([dl, slot, w]) => [dl * 32 + slot, w])) };
+  for (let i = 0; i <= data.steps.length; i++) {
+    if (i % 500 === 0) data.marks.push({ ts: [...state.ts], cells: new Map(state.cells) });
+    if (i < data.steps.length) apply(state, data.steps[i]);
+  }
+  data.message = code === 0 ? "" : err.replace(/^ace: /, "");
+  trace = data;
+  angle = new Map();
+  $("scrub").max = String(data.steps.length);
+  $("story").className = "story";
+  go(0);
+}
+function apply(state, step) {
+  for (const [n, w] of step[6]) state.ts[n] = w;
+  for (const [dl, slot, w] of step[7]) state.cells.set(dl * 32 + slot, w);
+}
+function stateAt(n) {
+  const mark = trace.marks[Math.floor(n / 500)];
+  const state = { ts: [...mark.ts], cells: new Map(mark.cells) };
+  for (let i = Math.floor(n / 500) * 500; i < n; i++) apply(state, trace.steps[i]);
+  return state;
+}
+function go(n) {
+  if (!trace) return;
+  at = Math.max(0, Math.min(n, trace.steps.length));
+  $("scrub").value = String(at);
+  showStep();
+}
+
+function ringSvg(dl, state, now, target, kind, line) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 200 200");
+  svg.setAttribute("role", "img");
+  svg.dataset.kind = kind;
+  svg.setAttribute("aria-label", `Delay line ${dl}, minor cycle ${target + 1} wanted`);
+  const spin = document.createElementNS(NS, "g");
+  spin.setAttribute("class", "spin");
+  for (let slot = 0; slot < 32; slot++) {
+    const a0 = (slot / 32) * 2 * Math.PI - Math.PI / 2 - Math.PI / 32, a1 = a0 + (2 * Math.PI) / 32 - 0.02;
+    const [r0, r1] = [62, 90];
+    const pt = (r, a) => `${100 + r * Math.cos(a)},${100 + r * Math.sin(a)}`;
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", `M${pt(r1, a0)} A${r1},${r1} 0 0 1 ${pt(r1, a1)} L${pt(r0, a1)} A${r0},${r0} 0 0 0 ${pt(r0, a0)} Z`);
+    const w = state.cells.get(dl * 32 + slot) || 0;
+    const fill = slot === target ? (kind === "op" ? "var(--accent)" : "var(--ok)")
+      : trace.code.has(dl * 32 + slot) ? "color-mix(in srgb, var(--code) 40%, var(--soft))"
+      : w ? "color-mix(in srgb, var(--word) 50%, var(--soft))" : "var(--soft)";
+    path.setAttribute("fill", fill);
+    const title = document.createElementNS(NS, "title");
+    title.textContent = `${name(dl, slot)}: ${bits(w)}`;
+    path.append(title);
+    spin.append(path);
+  }
+  // Turn so that the minor cycle at the reading end now is at the top.
+  const before = angle.get(line);
+  const target_ = -now * (360 / 32);
+  const delta = before === undefined ? 0 : before - target_;
+  spin.style.transitionDuration = before === undefined || delta > 360 * 2 || delta < 0 ? "0ms" : `${Math.min(900, delta * 4)}ms`;
+  if (before !== undefined) spin.style.transform = `rotate(${before}deg)`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { spin.style.transform = `rotate(${target_}deg)`; }));
+  angle.set(line, target_);
+  svg.append(spin);
+  // The reading end: the crystal at the far end of the tube.
+  const head = document.createElementNS(NS, "path");
+  head.setAttribute("d", "M100,2 L92,-2 L108,-2 Z M100,4 L100,14");
+  head.setAttribute("stroke", "var(--head)");
+  head.setAttribute("stroke-width", "3");
+  head.setAttribute("fill", "var(--head)");
+  head.setAttribute("transform", "translate(0,4)");
+  svg.append(head);
+  const label = document.createElementNS(NS, "text");
+  label.setAttribute("x", "100"); label.setAttribute("y", "98");
+  label.setAttribute("text-anchor", "middle"); label.setAttribute("fill", "currentColor");
+  label.setAttribute("font-size", "15"); label.setAttribute("font-family", "ui-monospace, monospace");
+  label.textContent = `DL ${dl}`;
+  const sub = label.cloneNode();
+  sub.setAttribute("y", "116"); sub.setAttribute("font-size", "11"); sub.setAttribute("opacity", ".7");
+  sub.textContent = `wants ${target + 1}`;
+  svg.append(label, sub);
+  return svg;
+}
+
+function showStep() {
+  if (!trace) {
+    for (const id of ["lc", "rings", "strips", "ts", "budget", "legend"]) $(id).replaceChildren();
+    $("clock").textContent = "Press Run, or Play, to start.";
+    $("story").textContent = "";
+    return;
+  }
+  const state = stateAt(at);
+  const last = at > 0 ? trace.steps[at - 1] : null;
+  const now = last ? last[2] : 0;
+  const total = trace.steps.length;
+  const end = at === total;
+  $("clock").innerHTML = "";
+  const clock = $("clock");
+  const b = document.createElement("b");
+  b.textContent = us(now);
+  clock.append(b, ` of machine time · minor cycle ${now.toLocaleString()} · instruction ${at.toLocaleString()} of ${total.toLocaleString()}`);
+  if (end) clock.append(trace.idle ? " · the job is over" : ` · ${trace.message || trace.stop}`);
+
+  // The logical control: CD, the position of the next instruction; CI, the last one obeyed.
+  const cd = end ? (last ? null : trace.start.cd) : trace.steps[at][3];
+  const rows = [];
+  const add = (k, v, cls = "") => { const a = document.createElement("span"); a.className = "k"; a.textContent = k; const c = document.createElement("span"); c.className = cls; c.textContent = v; rows.push(a, c); };
+  if (last) {
+    add("CI", `${bits(last[4])}   ${trace.forms[last[5]]}`, "bits");
+    add("from", fromTs6(last[3]) ? "TS 6" : name(posOf(last[3]).dl, posOf(last[3]).slot));
+  }
+  if (cd !== null && !end) add("CD", `${bits(cd)}   next: ${fromTs6(cd) ? "TS 6" : name(posOf(cd).dl, posOf(cd).slot)}`, "bits");
+  $("lc").replaceChildren(...rows);
+
+  // What happened, and what it cost.
+  const story = [];
+  const rings = [];
+  if (last) {
+    const [began, fetched, done, lcd, ci] = last;
+    const type = typeOf(ci);
+    if (fromTs6(lcd)) story.push(`The instruction came from TS 6, with no wait.`);
+    else {
+      const pos = posOf(lcd);
+      const wait = fetched - began;
+      story.push(`Looked for ${name(pos.dl, pos.slot)} at minor cycle ${began}; it reached the end of DL ${pos.dl} ${wait ? `${wait} minor cycle${wait === 1 ? "" : "s"} later (${us(wait)})` : "at once"}.`);
+      rings.push(ringSvg(pos.dl, state, fetched, pos.slot, "ins", "ins"));
+    }
+    if (type === "K" || type === "L") {
+      const pos = posOf(ci);
+      const wait = done - 1 - (fetched + 1);
+      story.push(`${type === "K" ? "Storing into" : "Fetching"} ${name(pos.dl, pos.slot)} waited ${wait} minor cycle${wait === 1 ? "" : "s"} for it to come round.`);
+      rings.push(ringSvg(pos.dl, state, done - 1, pos.slot, "op", "op"));
+    } else if (type === "S") story.push(`The arithmetic took ${done - fetched - 1} minor cycles.`);
+    else if (type === "O" || type === "P") story.push(`A card passed the ${type === "O" ? "punch" : "reader"}: ${us(done - fetched - 1)}, longer than everything around it.`);
+    else if (type === "B") story.push(`Type B: control passes on; the position left went into TS 1.`);
+  } else story.push("The machine before the first instruction. Play, or step on with >.");
+  $("story").textContent = story.join(" ");
+  $("rings").replaceChildren(...rings.map((svg, i) => {
+    const div = document.createElement("div");
+    div.className = "ring";
+    div.append(svg, svg.dataset.kind === "op" ? "the operand" : "the instruction");
+    return div;
+  }));
+
+  // Every line in use, as a strip of 32 minor cycles.
+  const head = now % 32;
+  const got = last && !fromTs6(last[3]) ? posOf(last[3]) : null;
+  const op = last && ["K", "L"].includes(typeOf(last[4])) ? posOf(last[4]) : null;
+  $("strips").replaceChildren(...trace.lines.map((dl) => {
+    const row = document.createElement("div");
+    row.className = "strip";
+    const label = document.createElement("span");
+    label.textContent = `DL ${dl}`;
+    row.append(label);
+    for (let slot = 0; slot < 32; slot++) {
+      const cell = document.createElement("i");
+      const w = state.cells.get(dl * 32 + slot) || 0;
+      const cls = [trace.code.has(dl * 32 + slot) ? "c" : w ? "w" : ""];
+      if (slot === head) cls.push("head");
+      if (got && got.dl === dl && got.slot === slot) cls.push("got");
+      if (op && op.dl === dl && op.slot === slot) cls.push("op");
+      cell.className = cls.join(" ");
+      cell.title = `${name(dl, slot)}: ${bits(w)} (${signed(w)})`;
+      row.append(cell);
+    }
+    return row;
+  }));
+
+  // The temporary storages.
+  const changed = new Set(last ? last[6].map(([n]) => n) : []);
+  $("ts").replaceChildren(...Array.from({ length: 32 }, (_, i) => {
+    const n = i + 1, w = state.ts[n];
+    const div = document.createElement("div");
+    if (changed.has(n)) div.className = "changed";
+    div.title = `TS ${n}${DUTY[n] ? `: ${DUTY[n]}` : ""}\n${bits(w)}`;
+    const b = document.createElement("b");
+    b.textContent = `TS ${n}`;
+    const dots = document.createElement("div");
+    dots.className = "dots";
+    for (let k = 1; k <= 32; k++) { const s = document.createElement("span"); if (digit(w, k)) s.className = "on"; dots.append(s); }
+    div.append(b, ` ${signed(w)}`, dots);
+    return div;
+  }));
+
+  // Where the time went, up to here.
+  const parts = { "waiting for instructions": 0, "waiting for operands": 0, "arithmetic": 0, "cards": 0, "other operations": 0 };
+  for (let i = 0; i < at; i++) {
+    const [began, fetched, done, , ci] = trace.steps[i];
+    parts["waiting for instructions"] += fetched - began;
+    const type = typeOf(ci), work = done - fetched;
+    if (type === "K" || type === "L") { parts["waiting for operands"] += work - 2; parts["other operations"] += 2; }
+    else if (type === "S") parts["arithmetic"] += work;
+    else if (type === "O" || type === "P") parts["cards"] += work;
+    else parts["other operations"] += work;
+  }
+  const sum = Object.values(parts).reduce((a, b) => a + b, 0) || 1;
+  const colours = ["var(--head)", "var(--accent)", "var(--word)", "color-mix(in srgb, var(--fg) 35%, var(--bg))", "var(--ok)"];
+  $("budget").replaceChildren(...Object.values(parts).map((v, i) => { const s = document.createElement("span"); s.style.width = `${(100 * v) / sum}%`; s.style.background = colours[i]; return s; }));
+  $("legend").replaceChildren(...Object.entries(parts).map(([k, v], i) => {
+    const s = document.createElement("span");
+    const box = document.createElement("i");
+    box.style.background = colours[i];
+    s.append(box, `${k} ${Math.round((100 * v) / sum)}%`);
+    return s;
+  }));
+}
+
+function stopPlay() { clearTimeout(playing); playing = 0; $("s-play").textContent = "Play"; }
+function play() {
+  if (!trace) { runStep().then(() => trace && play()); return; }
+  if (at >= trace.steps.length) go(0);
+  $("s-play").textContent = "Pause";
+  const tick = () => {
+    const delay = Number($("s-speed").value);
+    const by = delay <= 1 ? 25 : 1;
+    go(at + by);
+    if (at < trace.steps.length) playing = setTimeout(tick, delay);
+    else stopPlay();
+  };
+  playing = setTimeout(tick, 0);
+}
+$("s-play").onclick = () => (playing ? stopPlay() : play());
+$("s-next").onclick = () => { stopPlay(); go(at + 1); };
+$("s-back").onclick = () => { stopPlay(); angle = new Map(); go(at - 1); };
+$("s-start").onclick = () => { stopPlay(); angle = new Map(); go(0); };
+$("scrub").oninput = () => { stopPlay(); angle = new Map(); go(Number($("scrub").value)); };
+
+// ---- Start with the example named in the address, if any.
+const wanted = new URLSearchParams(location.search).get("example");
+const option = [...$("examples").options].find((o) => ["job:", "time:", "lib:"].some((k) => o.value === k + wanted));
+if (option) $("examples").value = option.value;
+await choose();
+</script>
+</body>
+</html>
