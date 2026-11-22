@@ -242,10 +242,10 @@ fn duration(w: Word) -> &'static str {
         return "No time in CA: the next instruction is looked for at once.";
     }
     match Type::of(w) {
-        Some(Type::K | Type::L) => "Waits for the minor cycle to come round: up to 32 minor cycles, about a millisecond.",
-        Some(Type::O | Type::P) => "Takes as long as the card does to pass.",
-        Some(Type::S) if digit(w, sig::AUTO) => "16 minor cycles: the addition done eight times, four digits of the multiplier at a time.",
-        Some(Type::S) => "2 minor cycles, the partial sum being 64 digits long. The next instruction has then just gone by, and is waited for.",
+        Some(Type::K | Type::L) => "Waits for the minor cycle to come round: up to 32 minor cycles, about a millisecond. The next instruction is found meanwhile, and waits in CI.",
+        Some(Type::O | Type::P) => "Takes as long as the card does to pass. The next instruction is found meanwhile.",
+        Some(Type::S) if digit(w, sig::AUTO) => "16 minor cycles: the addition done eight times, four digits of the multiplier at a time. The next instruction is found meanwhile.",
+        Some(Type::S) => "2 minor cycles, the partial sum being 64 digits long. The next instruction is found meanwhile (section 11), so nothing is lost.",
         Some(_) => "1 minor cycle: the next instruction arrives just as it ends.",
         None => "",
     }

@@ -61,23 +61,23 @@ $ ace audit
 
   the table as printed        FAILS   TS 28 = 0; stopped at INDEXIN 11 after 46 instructions: waiting for a card that is not in the reader
   the cards of Fig. 38        FAILS   TS 28 = 0; stopped at INDEXIN 11 after 46 instructions: waiting for a card that is not in the reader
-  the table, all corrections  works   TS 28 = 1945; came back after 71 instructions
+  the table, all corrections  works   TS 28 = 1945; came back after 72 instructions
 
 3. Each correction to INDEXIN left out in turn
 
-  without `literal`        FAILS   TS 28 = 13107232; DL 3,5 now holds 13107232; came back after 71 instructions
+  without `literal`        FAILS   TS 28 = 13107232; DL 3,5 now holds 13107232; came back after 72 instructions
   without `half`           FAILS   TS 28 = 0; stopped at INDEXIN 11 after 46 instructions: waiting for a card that is not in the reader
   without `return`         FAILS   TS 28 = 1945; stopped at BURY 1 after 1361 instructions: waiting for a card that is not in the reader
 
 4. CALPOL on the machine: x^3 - 2x + 5 at x = 7, which is 334
 
                               once                  twice in a row
-  as printed                  never stops           never stops
+  as printed                  loops for ever        loops for ever
   all corrections             334                   334
   without `clear`             334                   1275202557  WRONG
   without `inputs`            0  WRONG              0  WRONG
   without `branch`            waits for a card      waits for a card
-  without `carry`             never stops           never stops
+  without `carry`             loops for ever        loops for ever
   without `contents`          0  WRONG              0  WRONG
 
   INDEXIN, BURY, UNBURY and DISCRIM are corrected in every row: CALPOL calls them.
@@ -91,8 +91,9 @@ $ ace audit
 ```
 
 As printed it does not work, and the cards of Fig. 38 do not agree with the
-table in three places. It needs three corrections, and the audit leaves each
-out in turn to show that each is needed:
+table in three places. It needs three corrections. With TS 27 holding a
+position only, as INDEXIN's description says, the audit leaves each out in
+turn to show that each is needed:
 
 - `literal`: line 1 makes the code of type K, which stores, where type L,
   which fetches, is meant. Carpenter and Doran noted this in 1986.
@@ -101,11 +102,16 @@ out in turn to show that each is needed:
 - `return`: the table ends `B, BURY` where it should end `B, UNBURY`.
   Carpenter and Doran noted this too.
 
+All three are slips: wrong under any reading of the report. But the first
+would not have shown in Turing's own use of INDEXIN. CALPOL calls it with a
+whole order of type L in TS 27, and INDEXIN ORs all of TS 27 into the order
+it builds, so the code of type L arrives from there.
+
 ```console
 $ ace errata
 literal  (INDEXIN)
     INDEXIN 1 builds the code of type K, not of type L
-    INDEXIN makes an instruction to fetch a minor cycle and obeys it from TS 6. Line 1 supplies the digits of its type: 0000,0100, which after the rotation are digits 5-8 = 0100. Fig. 19 gives 0100 to type K, which stores TS 6, and 0101 to type L, which fetches. As printed the table writes the instruction it has just built over the minor cycle it was sent to read. The literal becomes 0000,0101,0000,0000.
+    INDEXIN makes an instruction to fetch a minor cycle and obeys it from TS 6. Line 1 supplies the digits of its type: 0000,0100, which after the rotation are digits 5-8 = 0100. Fig. 19 gives 0100 to type K, which stores TS 6, and 0101 to type L, which fetches. As printed the table writes the instruction it has just built over the minor cycle it was sent to read. The literal becomes 0000,0101,0000,0000. This holds for INDEXIN as its general description defines it, with a position in digits 17-32 of TS 27. CALPOL calls it with a whole order of type L in TS 27, whose digits 5-8 already say L, and the OR on line 9 then makes the code right: Turing's own use of INDEXIN would not have shown this slip.
     Kind: a slip: wrong under any reading of the report.
     Known before: Carpenter and Doran, 1986, note 17.
 
@@ -141,9 +147,9 @@ branch  (CALPOL)
 
 carry  (CALPOL)
     CALPOL obeys TS 6 after DISCRIM, but the choice is in TS 24
-    DISCRIM passes the chosen instruction into TS 24 and comes back through UNBURY, which has to use TS 6 to get back at all. B, 1 then obeys what UNBURY left there: the instruction that returned, which returns to B, 1 again, for ever. TS 24 - TS 6 is put in front of it.
+    DISCRIM passes the chosen instruction into TS 24 and comes back through UNBURY. The UNBURY written here returns by building the return instruction in TS 6 and obeying it there, so B, 1 then obeys the instruction that returned, which returns to B, 1 again, for ever. TS 24 - TS 6 is put in front of it. An UNBURY that returned through a minor cycle in a delay line instead, and left TS 6 alone, would not need this.
     Kind: ours: needed only because of how the tables written here work.
-    Known before: not that we found; it depends on how BURY and UNBURY are written.
+    Known before: not that we found; it depends on how UNBURY is written.
 
 contents  (CALPOL)
     The contents printed for DL 1,14 and DL 1,15 do not name DL 3,1
@@ -165,8 +171,11 @@ DISCRIM  1 slip, 0 conflicts, 0 ours
 ## CALPOL
 
 CALPOL calculates a polynomial of degree 15 whose coefficients are in DL 3,
-for the argument in TS 13, by Horner's rule. As printed it never stops. With
-five corrections it does:
+for the argument in TS 13, by Horner's rule. As printed it never stops: the
+audit finds the machine back in a state it has already been in, exactly,
+so it goes round for ever. With five changes it does: three slips, one
+place where it follows the other of two things section 12 says, and one
+needed only because of how the UNBURY written here returns.
 
 ```ace
 # cards: listing
@@ -257,6 +266,23 @@ $ ace decisions
 Before the start the tool sets:
     TS 31  the position of the first note BURY will make, DL 31,1
     TS 7   the 16 places INDEXIN rotates by
+
+Where the report says nothing, the simulation:
+    Long multiplication: AUTO is simulated as one signed multiplication of the multiplicand by all 32 digits of the multiplier (TS 3, or TS 11 with ERR), which is what eight repetitions on four digits at a time amount to. How DIFF and TS 12 choose the digits during AUTO is not simulated; GIV with AUTO is not supported.
+    DIFF without TS 12: Outside AUTO, DIFF takes the multiplier digits from the lowest pulse in TS 12; with TS 12 empty it falls back to the ordinary choice.
+    Several multiplier sources: If GIV, ERR and NOR are set together, GIV is taken first, then ERR.
+    Logical operations not listed: TRA digits other than the five of section 12 put 0 into TS 8.
+    Unused codes: Digits 5-8 that name none of the ten types do nothing for one minor cycle.
+    TS 32: A five-digit TS field of 0 names TS 32.
+    The start: Every storage starts at 0. A job put straight into the machine may also set TS 1, 4, 5 and 8, which no instruction can fill; a job loaded from cards cannot.
+    Cards: A card takes 18,750 minor cycles, 100 cards a minute, and its twelve rows move at once; the report describes a signal for each row and gives no speed.
+    The end: An instruction of type B that names itself ends the run. On the machine it would go on obeying itself.
+    Valve elements: Type T records which element was stimulated; no circuit is connected to it.
+    Rotation with arithmetic: When ROTATE is set with other signals, the arithmetic is done first and the rotation after. THREE changes only how long the rotation takes.
+    ROTATE n: The machine rotates by the amount in TS 7. The n written after ROTATE is for the reader, and `ace check` warns when it is not 16, which TS 7 holds unless the job changes it.
+    BURY and UNBURY: Ours, to the descriptions of sections 6 and 13. TS 31 points at the next free place for a note; UNBURY moves it back one before reading. The note is the position of the B that entered the subsidiary, and both tables go on at the instruction after it.
+    INDEXIN and TS 27: INDEXIN ORs all 32 digits of TS 27 into the order it builds, although its description speaks only of digits 17-32. Digits 1-16 of TS 27 must be zero, or the code of type L, as CALPOL leaves them.
+    Timing: The search for the next instruction overlaps the arithmetic of this one (section 11). What instructions do to the storages happens in order; only the timing overlaps.
 ```
 
 The errata can be switched off: `--errata none` runs the tables as printed.

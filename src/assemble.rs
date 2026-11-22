@@ -224,7 +224,7 @@ impl Builder<'_> {
                     for i in &instrs {
                         self.note_refs(i, library);
                     }
-                    self.code(at, label, instrs, next, n, blame);
+                    self.code(at, label, instrs, next, n, blame, raw);
                 }
             }
         }
@@ -252,7 +252,8 @@ impl Builder<'_> {
         }
     }
 
-    fn code(&mut self, at: usize, label: Option<Label>, instrs: Vec<Instr>, next: Option<Label>, line: usize, blame: Option<Span>) {
+    #[allow(clippy::too_many_arguments)]
+    fn code(&mut self, at: usize, label: Option<Label>, instrs: Vec<Instr>, next: Option<Label>, line: usize, blame: Option<Span>, raw: &str) {
         let name = self.unit.tables[at].name.clone();
         self.unit.tables[at].last_line = line;
         if let Some(label) = label {
@@ -283,6 +284,7 @@ impl Builder<'_> {
         let mut last_is_b = false;
         for instr in &instrs {
             self.lint(instr, blame);
+            self.lint_rotate(instr, blame, raw);
             for micro in expand(&instr.op) {
                 last_is_b = matches!(micro, Micro::B { .. });
                 self.unit.tables[at].micros.push((micro, blame.is_none().then_some(instr.span)));
@@ -296,6 +298,23 @@ impl Builder<'_> {
             } else if next.fig != expected {
                 self.problem(next.span, false, format!("the instruction after this one is {} {}, not {} {}", name, expected, name, next.fig));
             }
+        }
+    }
+
+    /// `ROTATE n`: the machine rotates by TS 7, which holds 16 unless the
+    /// job changes it. A different n is a hope, not an instruction.
+    fn lint_rotate(&mut self, instr: &Instr, blame: Option<Span>, raw: &str) {
+        if blame.is_some() || !matches!(&instr.op, Op::S { signals, .. } if signals == &[sig::ROTATE]) {
+            return;
+        }
+        let text: String = raw.chars().skip(instr.span.start).take(instr.span.end - instr.span.start).collect();
+        let n = text.trim_start_matches("ROTATE").trim();
+        if !n.is_empty() && n != "16" {
+            self.problem(
+                instr.span,
+                false,
+                format!("the machine rotates by the number in TS 7, which is 16 unless this job puts {} there: the {} is not part of the instruction", n, n),
+            );
         }
     }
 

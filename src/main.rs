@@ -208,8 +208,8 @@ fn real_main() -> Result<(), String> {
                 println!(
                     "{} instructions in {} minor cycles: {} of machine time",
                     m.steps,
-                    m.time,
-                    time(m.time)
+                    m.elapsed(),
+                    time(m.elapsed())
                 );
             }
             match stop {
@@ -296,6 +296,10 @@ fn real_main() -> Result<(), String> {
             println!("Before the start the tool sets:");
             for (n, _, why) in STANDING {
                 println!("    TS {:<3} {}", n, why);
+            }
+            println!("\nWhere the report says nothing, the simulation:");
+            for (what, how) in ace::CONVENTIONS {
+                println!("    {}: {}", what, how);
             }
             Ok(())
         }
@@ -475,7 +479,7 @@ fn run_json(unit: &Unit, mut m: ace::machine::Machine, deck: usize, limit: u64, 
         quote(&stop.to_string()),
         matches!(stop, Stop::Idle(_)),
         quote(&place(unit, m.cd)),
-        m.time,
+        m.elapsed(),
         m.steps,
         deck
     );

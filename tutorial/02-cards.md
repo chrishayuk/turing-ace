@@ -112,7 +112,7 @@ the job's own cards:
 $ ace run examples/echo.ace --input 1,2,3 --cold --time
 1 2 3
 4 cards of the deck read from cold
-21 instructions in 112929 minor cycles: 3613.7 milliseconds of machine time
+22 instructions in 112765 minor cycles: 3608.5 milliseconds of machine time
 ```
 
 Nearly all of that time is the reader. The report does not say how fast its

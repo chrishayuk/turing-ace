@@ -143,12 +143,52 @@ pub fn calpol(times: usize, errata: &[&str]) -> Result<i32, String> {
     let text = format!("{}\nTS 13    7\nDL 3,25  +1\nDL 3,29  -2\nDL 3,31  +5\n", text);
     let unit = assemble(&text, errata);
     let mut m = load(&unit, &[])?;
-    match run(&mut m, 400_000, |_, _| {}) {
-        Stop::Idle(_) => Ok(m.ts[25] as i32),
-        stop => {
+    match run_watching_for_a_loop(&mut m, 400_000) {
+        Ok(Stop::Idle(_)) => Ok(m.ts[25] as i32),
+        Err(steps) => Err(format!("loops: after {} instructions the machine is exactly as it was before, so it never stops", steps)),
+        Ok(stop) => {
             let pos = Pos::of(m.cd);
             let at = if m.cd & crate::word::P17 != 0 { "TS 6".to_string() } else { unit.name_of(pos).unwrap_or_else(|| pos.to_string()) };
             Err(format!("stopped at {}: {}", at, stop))
+        }
+    }
+}
+
+/// Everything that decides what the machine does next. Time is left out:
+/// it changes only how long things take, never what they do.
+fn state(m: &crate::machine::Machine) -> (u32, [Word; 33], Vec<[Word; 32]>, usize, usize) {
+    (m.cd, m.ts, m.lines.clone(), m.reader.len(), m.punched.len())
+}
+
+/// Runs like `run`, but every 997 instructions keeps the whole state of the
+/// machine. The machine is deterministic, so if a state comes round again it
+/// will go round for ever: `Err` with the number of instructions obeyed.
+/// Once inside a loop of period p, the state at two kept instructions p·997
+/// apart is the same, so a loop is found within p·997 instructions of
+/// entering it.
+pub fn run_watching_for_a_loop(m: &mut crate::machine::Machine, limit: u64) -> Result<Stop, u64> {
+    use std::collections::HashMap;
+    let mut seen: HashMap<u64, Vec<(u32, [Word; 33], Vec<[Word; 32]>, usize, usize)>> = HashMap::new();
+    loop {
+        if m.steps >= limit {
+            return Ok(Stop::Limit);
+        }
+        if m.steps % 997 == 0 {
+            let now = state(m);
+            let key = {
+                use std::hash::{Hash, Hasher};
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                now.hash(&mut h);
+                h.finish()
+            };
+            let bucket = seen.entry(key).or_default();
+            if bucket.iter().any(|earlier| *earlier == now) {
+                return Err(m.steps);
+            }
+            bucket.push(now);
+        }
+        if let Err(stop) = m.step() {
+            return Ok(stop);
         }
     }
 }
@@ -197,7 +237,8 @@ pub fn report() -> String {
     let say = |r: Result<i32, String>| match r {
         Ok(334) => "334".to_string(),
         Ok(v) => format!("{}  WRONG", v),
-        Err(e) if e.contains("step limit") => "never stops".to_string(),
+        Err(e) if e.starts_with("loops") => "loops for ever".to_string(),
+        Err(e) if e.contains("step limit") => "still running at the limit".to_string(),
         Err(e) if e.contains("card") => "waits for a card".to_string(),
         Err(e) => e,
     };

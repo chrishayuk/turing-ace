@@ -52,7 +52,9 @@ instructions to a line with semicolons, is read too.
 
 `ace` assembles a job the way section 7 describes doing it with cards and a
 collator: the tables a job uses are sorted by name and detail figure,
-numbered consecutively in the binary scale, and every reference filled in.
+numbered in order, and every reference filled in. Consecutive instructions
+lie two minor cycles apart, so with Fig. 19's numbering of minor cycles the
+instruction numbers used are not consecutive (decision 9).
 That gives *machine form*, one 32-digit minor cycle per instruction, laid
 out in the delay lines with consecutive instructions two minor cycles apart,
 as section 11 requires.
@@ -122,7 +124,7 @@ that format is ours. Loading takes far longer than running:
 $ ace run examples/answer.ace --cold --time
  000000042
 127 cards of the deck read from cold
-2430 instructions in 2441105 minor cycles: 78.1 seconds of machine time
+2431 instructions in 2420721 minor cycles: 77.5 seconds of machine time
 ```
 
 `tables` shows the machine form, and `--emit cards` the 80-column instruction
@@ -140,14 +142,15 @@ comes round, and that is most of what the machine spends its time on:
 
 ```
 $ ace run tutorial/jobs/placed.ace --time
-8 instructions in 16 minor cycles: 512 microseconds of machine time
+9 instructions in 17 minor cycles: 544 microseconds of machine time
 $ ace run tutorial/jobs/unplaced.ace --time
-8 instructions in 144 minor cycles: 4608 microseconds of machine time
+9 instructions in 145 minor cycles: 4640 microseconds of machine time
 ```
 
 Both jobs fetch four numbers. In the second each number has just gone by, so
-the machine waits for it, and while it waits the next instruction goes by
-too.
+the machine waits nearly a whole turn of the line for it. Looking for the
+next instruction overlaps the operation in hand, as section 11 describes, so
+it is the numbers that cost the time, not the instructions.
 
 ## Examples
 
@@ -188,8 +191,9 @@ simulation takes the other; **ours** is needed only because of how the
 tables written here, which the report describes but does not print, do
 their work.
 
-INDEXIN does not work as printed. It needs three corrections, and leaving
-out any one of them stops it working:
+INDEXIN does not work as printed. It needs three corrections. With TS 27
+holding a position only, as its description says, leaving out any one of
+them stops it working:
 
 | erratum | kind | problem | known before? |
 |---|---|---|---|
@@ -197,26 +201,35 @@ out any one of them stops it working:
 | `half` | slip | ROTATE 16 moves the code into TS 5; line 5 takes TS 4. Section 12 settles the direction: rotation is "multiplying the partial sum by a power of 2" | not that we found |
 | `return` | slip | The table ends `B, BURY` instead of `B, UNBURY` | Carpenter and Doran (1986), note 18 |
 
+The first of them does not show where Turing used INDEXIN himself. CALPOL
+puts a whole order of type L in TS 27, not only a position, and INDEXIN ORs
+all of TS 27 into the order it builds, so the type comes out right after
+all. Called as CALPOL calls it, INDEXIN fetches with or without `literal`.
+And for the same reason, INDEXIN as printed needs digits 1-16 of TS 27 to be
+zero, or that code, though its description speaks only of digits 17-32.
+
 Fig. 38 prints INDEXIN a second time, as the 13 cards that would be punched
-for it. Three of them do not agree with the table: the card for ADD 'A' also
-sets NOR, the card for OR is the code for AND, and the card for
+for it. Three of them do not agree with the table: the card for ADD 'A' sets
+NOR where the table's instruction sets GIV, the card for OR is the code for AND, and the card for
 `TS 8 - TS 6` is `TS 4 - TS 6`. Run as the cards have it, INDEXIN fails the
 same way. The figure was read digit by digit twice, by this project's agent
 and blind by a different model, with the same result on all thirteen rows:
 see [`docs/fig38-read-twice.md`](docs/fig38-read-twice.md). No person has
 checked it yet.
 
-CALPOL as printed never stops. With five changes it gives the right value,
-called once or twice in a row. Three are slips, one follows the other side
-of a conflict in the report, and one is needed only because of the tables
-written here:
+CALPOL as printed never stops: the machine comes back to a state it has
+already been in, exactly, so it goes round for ever. With five changes it
+gives the right value, called once or twice in a row, for the polynomial
+tried, with MULTIP and ADD doing whole numbers only. Three are slips, one
+follows the other side of a conflict in the report, and one is needed only
+because of how the UNBURY written here returns:
 
 | erratum | kind | problem |
 |---|---|---|
 | `clear` | slip | Line 1 clears TS 22, 23, the result, not TS 20, 21, the running product: a second call starts from the last product |
 | `inputs` | conflict | AND is given its arguments in TS 2 and TS 3, as one sentence of section 12 says; the logical operations of Fig. 29, and INDEXIN, read TS 9 and TS 10 |
 | `branch` | slip | The two ways on are made with type Q, which fills only digits 17-32 and so cannot make an instruction of type B under either reading of Q. Which instruction is the exit, CALPOL 50 rather than 40, is our reading |
-| `carry` | ours | After DISCRIM the chosen instruction is in TS 24, not TS 6. This depends on how BURY and UNBURY, which are ours, are written |
+| `carry` | ours | After DISCRIM the chosen instruction is in TS 24, not TS 6. Needed only because the UNBURY written here returns through TS 6; one that returned through a delay line would not need it |
 | `contents` | slip | The words printed for DL 1,14 and DL 1,15 do not name DL 3,1 under Fig. 19's position digits |
 
 Carpenter and Doran published an analysis of CALPOL's errors in 1977 (*The

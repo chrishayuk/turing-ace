@@ -171,6 +171,9 @@ pub struct Machine {
     /// Minor cycles since the start. Minor cycle t of every delay line is the
     /// one in slot t mod 32.
     pub time: u64,
+    /// The minor cycle in which the arithmetic part finishes the operation it
+    /// is doing. The control looks for the next instruction meanwhile.
+    pub busy: u64,
     pub steps: u64,
     pub reader: VecDeque<Card>,
     pub punched: Vec<Card>,
@@ -197,6 +200,7 @@ impl Machine {
             lines: vec![[0; 32]; LINES],
             cd: 0,
             time: 0,
+            busy: 0,
             steps: 0,
             reader: VecDeque::new(),
             punched: Vec::new(),
@@ -229,6 +233,15 @@ impl Machine {
     }
 
     /// Obey one instruction.
+    ///
+    /// Section 11 describes the cycle of the logical control: the search for
+    /// the next instruction begins once the current one has set its CA
+    /// operation going and set up the new CD (OKLK); the instruction found
+    /// waits in CI until the CA operation before it has finished (OKCA), and
+    /// only then does its own begin. So looking for the next instruction
+    /// overlaps the arithmetic of this one. `time` is when the search may
+    /// begin, `busy` when the arithmetic part is free. What each instruction
+    /// does to the storages happens in order; only the timing overlaps.
     pub fn step(&mut self) -> Result<Event, Stop> {
         let cd = self.cd;
         // The search for the new CI. A 1 in digit 17 takes it from TS 6.
@@ -239,27 +252,40 @@ impl Machine {
             let w = self.read(at)?;
             (w, arrives(self.time, at.slot))
         };
-        let mut done = fetched + 1;
+        // In CI at the end of the minor cycle it arrives in; obeyed when the
+        // arithmetic part is free.
+        let start = (fetched + 1).max(self.busy);
+        let done;
         let effect;
         if digit(ci, 3) {
             // Type B: the new CD is CI 17-32, and the old CD retires to TS 1.
             let new = ci & UPPER;
+            self.ts[1] = cd;
+            self.steps += 1;
+            self.time = start;
             if new == cd && cd & P17 == 0 {
                 return Err(Stop::Idle(Pos::of(cd)));
             }
-            self.ts[1] = cd;
             self.cd = new;
+            done = start;
             effect = String::from("TS 1 = the position left");
         } else {
-            let (text, took) = self.operate(ci, done)?;
+            let (text, took) = self.operate(ci, start)?;
             effect = text;
-            done += took;
-            // Type A: CD = (CD' + P19) & -P17.
+            done = start + took;
+            self.busy = done;
+            // Type A: CD = (CD' + P19) & -P17. The search for the next
+            // instruction begins a minor cycle after this one starts.
             self.cd = cd.wrapping_add(P19) & !P17 & UPPER;
+            self.time = start + 1;
+            self.steps += 1;
         }
-        self.time = done;
-        self.steps += 1;
         Ok(Event { cd, ci, fetched, done, effect })
+    }
+
+    /// Minor cycles since the start, to the end of the last operation.
+    pub fn elapsed(&self) -> u64 {
+        self.time.max(self.busy)
     }
 
     /// The operation of CA that CI 5-32 asks for, beginning in minor cycle
@@ -365,7 +391,10 @@ impl Machine {
             if on(sig::DIFF) && self.ts[12] != 0 {
                 first = self.ts[12].trailing_zeros() + 1;
             }
-            cand.wrapping_mul((source.rotate_right(first - 1) & 15) as i64)
+            // Digit 32 has reversed sign: a group that includes it is signed.
+            let group = (source.rotate_right(first - 1) & 15) as i64;
+            let group = if first == 29 && group & 8 != 0 { group - 16 } else { group };
+            cand.wrapping_mul(group)
         } else {
             0
         };
