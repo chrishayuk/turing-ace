@@ -289,6 +289,15 @@ node web/test.mjs                   # runs every example through the wasm build
 python3 -m http.server -d web 8000  # then open http://localhost:8000
 ```
 
+## Independent review
+
+A second model, OpenAI's Codex, reviewed this repository independently and
+transcribed Fig. 38 blind. What it found and what was done about each point
+is in [`docs/independent-review.md`](docs/independent-review.md). The most
+important: the simulation fetched the next instruction only after the
+arithmetic had finished, where section 11 overlaps the two. It now overlaps
+them.
+
 ## Sources
 
 The report and its figures are not in this repository.
