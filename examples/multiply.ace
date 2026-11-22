@@ -1,0 +1,14 @@
+# cards: listing
+# Read two numbers and punch their product. MULTIPLY 'A' is long
+# multiplication: TS 2 times TS 3 into the partial sum, which is cancelled
+# first. It takes 16 minor cycles, half a millisecond.
+PRODUCT
+  1   P, DL 2
+  2   DL 2,1 - TS 2
+  4   DL 2,2 - TS 3
+  6   MULTIPLY 'A'
+  7   TS 4 - TS 13
+  9   B, BURY
+ 10   B, BINDEC
+ 11   O, DL 10
+ 12   B, PRODUCT 12

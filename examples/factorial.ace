@@ -1,0 +1,17 @@
+# cards: listing
+# n! for the n on the card, n from 1 to 12. TS 20 counts down from n and
+# TS 21 holds the product so far.
+FACT
+  1   P, DL 2
+  2   DL 2,1 - TS 20
+  4   FACT 60 - TS 21
+ 10   TS 21 - TS 2;  TS 20 - TS 3;  MULTIPLY 'A';  TS 4 - TS 21
+      TS 20 - TS 2;  ADD 'A';  FACT 60 - TS 2;  SUBTRACT;  TS 4 - TS 20
+      TS 20 - TS 9;  TS 20 - TS 10;  AND
+      FACT 61 - TS 15;  FACT 62 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+ 50   TS 21 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+ 56   B, FACT 56
+ 60   +1
+ 61   B, FACT 10
+ 62   B, FACT 50

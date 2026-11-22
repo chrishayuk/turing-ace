@@ -1,0 +1,16 @@
+# cards: listing
+# Count down from the number on the card to 1, one card each. The way on is
+# chosen by DISCRIM: back round while TS 20 has a digit in it.
+COUNT
+  1   P, DL 2
+  2   DL 2,1 - TS 20
+ 10   TS 20 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+      TS 20 - TS 2;  ADD 'A';  COUNT 60 - TS 2;  SUBTRACT;  TS 4 - TS 20
+      TS 20 - TS 9;  TS 20 - TS 10;  AND
+      COUNT 61 - TS 15;  COUNT 62 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+ 50   B, COUNT 50
+# The numbers: 1, and the two ways on.
+ 60   +1
+ 61   B, COUNT 10
+ 62   B, COUNT 50

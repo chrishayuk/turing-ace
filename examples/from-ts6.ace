@@ -1,0 +1,18 @@
+# An instruction can be obeyed from TS 6 (section 11). B with a 1 in
+# column 17 carries out whatever is in TS 6, and if that is of type A the
+# machine goes on at the instruction after the B. Here the instruction is
+# made by the program: Q puts a position into digits 17-32 of TS 6, and the
+# code of type O is added to digits 1-16 by OR.
+MAKE
+  1   Q, DL 7,1
+  2   TS 6 - TS 9
+  3   MAKE 20 - TS 10
+  5   OR
+  6   TS 8 - TS 6
+  7   B, 1
+  8   B, MAKE 8
+# The code of type O, digits 5-8 = 0001.
+ 20   0000,0001,0000,0000,0000,0000,0000,0000
+
+DL 7,1  +7
+DL 7,2  +1

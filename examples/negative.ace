@@ -1,0 +1,13 @@
+# cards: listing
+# Numbers are binary, and the last digit has reversed sign: a word of 32
+# ones is -1. Subtracting from zero makes a number negative, and BINDEC
+# punches the minus sign in row 11.
+NEGATE
+  1   P, DL 2
+  2   DL 2,1 - TS 2
+  4   SUBTRACT 'A'
+  5   TS 4 - TS 13
+  7   B, BURY
+  8   B, BINDEC
+  9   O, DL 10
+ 10   B, NEGATE 10

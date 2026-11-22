@@ -1,0 +1,11 @@
+# A completely blank instruction has a definite meaning (section 12): pass
+# the material on the card in the reader into DL 0. Turing arranged that the
+# order the machine starts with is 0 throughout, so that it reads its first
+# card without being told.
+#
+# Here the blank instruction is written as 32 zeros, and the card it reads
+# is punched again.
+START
+  1   0000,0000,0000,0000,0000,0000,0000,0000
+  2   O, DL 0
+  3   B, START 3

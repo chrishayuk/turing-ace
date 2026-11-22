@@ -1,0 +1,31 @@
+# cards: listing
+# Euclid by subtraction: the greatest common divisor of the two numbers on
+# the card. There is no division (section 12 makes it an instruction table
+# operation), so the larger is reduced by the smaller until they are equal.
+# The sign of a - b is read from TS 5, which is all ones when the partial
+# sum is negative, and DISCRIM chooses the way on.
+GCD
+  1   P, DL 2
+  2   DL 2,1 - TS 20
+  4   DL 2,2 - TS 21
+# Equal? a - b has no digit 1.
+ 10   TS 20 - TS 2;  ADD 'A';  TS 21 - TS 2;  SUBTRACT
+      TS 4 - TS 9;  TS 4 - TS 10;  AND
+      GCD 161 - TS 15;  GCD 160 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+# Negative? Then b is the larger.
+ 40   TS 20 - TS 2;  ADD 'A';  TS 21 - TS 2;  SUBTRACT
+      TS 5 - TS 9;  TS 5 - TS 10;  AND
+      GCD 163 - TS 15;  GCD 162 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+# a = a - b
+100   TS 20 - TS 2;  ADD 'A';  TS 21 - TS 2;  SUBTRACT;  TS 4 - TS 20;  B, GCD 10
+# b = b - a
+120   TS 21 - TS 2;  ADD 'A';  TS 20 - TS 2;  SUBTRACT;  TS 4 - TS 21;  B, GCD 10
+140   TS 20 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+146   B, GCD 146
+# The ways on.
+160   B, GCD 140
+161   B, GCD 40
+162   B, GCD 100
+163   B, GCD 120

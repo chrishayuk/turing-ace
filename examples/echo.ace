@@ -1,0 +1,6 @@
+# Read a card and punch it again: the smallest job there is. The card goes
+# into the first twelve minor cycles of DL 2 and comes out from there.
+ECHO
+  1   P, DL 2
+  2   O, DL 2
+  3   B, ECHO 3

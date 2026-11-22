@@ -1,0 +1,16 @@
+# The five logical operations of section 12 work digit by digit on TS 9
+# and TS 10 and leave the result in TS 8. Each result is punched as a row
+# of the card, so the holes show the digits.
+LOGIC
+  1   DL 1,1 - TS 9
+  3   DL 1,2 - TS 10
+  5   AND;   TS 8 - DL 2,1
+  8   OR;    TS 8 - DL 2,2
+ 11   NOT;   TS 8 - DL 2,3
+ 14   IFF;   TS 8 - DL 2,4
+ 17   NEVER; TS 8 - DL 2,5
+ 20   O, DL 2
+ 21   B, LOGIC 21
+
+DL 1,1  1100,0000,0000,0000,0000,0000,0000,0000
+DL 1,2  1010,0000,0000,0000,0000,0000,0000,0000

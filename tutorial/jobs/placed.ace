@@ -1,0 +1,8 @@
+# Four numbers, each placed in the minor cycle that comes out just as the
+# instruction that wants it begins.
+PLACED
+  1   DL 5,2 - TS 20
+  3   DL 5,6 - TS 21
+  5   DL 5,10 - TS 22
+  7   DL 5,14 - TS 23
+  9   B, PLACED 9

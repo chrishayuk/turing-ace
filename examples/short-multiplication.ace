@@ -1,0 +1,15 @@
+# cards: listing
+# Short multiplication: a multiplier less than 16 written in the
+# instruction itself (GIV), from Fig. 37. S, POS, CANCEL, GIV, 6 is six
+# times TS 2. SELF multiplies the partial sum by itself instead, so
+# S, POS, CANCEL, SELF, GIV, 6 makes it six times larger again.
+SHORT
+  1   P, DL 2
+  2   DL 2,1 - TS 2
+  4   S, POS, CANCEL, GIV, 6
+  5   S, POS, CANCEL, SELF, GIV, 6
+  6   TS 4 - TS 13
+  8   B, BURY
+  9   B, BINDEC
+ 10   O, DL 10
+ 11   B, SHORT 11

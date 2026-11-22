@@ -1,0 +1,7 @@
+SHOW
+  1   B, BURY
+  2   B, BINDEC
+  3   O, DL 10
+  4   B, SHOW 4
+
+TS 13   -1945

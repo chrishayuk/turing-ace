@@ -1,0 +1,115 @@
+# Subsidiary operations
+
+"We also wish to be able to arrange for the splitting up of operations into
+subsidiary operations. This should be done in such a way that once we have
+written down how an operation is to be done we can use it as a subsidiary
+to any other operation." (section 6)
+
+## Burying and disinterring
+
+To use a subsidiary, a table makes a note of where it left off, and the
+subsidiary ends by looking up the note. Turing keeps the notes in a list in
+a delay line, "with the most recent last", and its position in a temporary
+storage. The tables that do it are called BURY and UNBURY. So every call is
+two instructions:
+
+```
+B, BURY;  B, BINDEC
+```
+
+BURY makes the note and comes back to the instruction after it, `B, BINDEC`.
+BINDEC ends with `B, UNBURY`, which takes the most recent note off the list
+and goes on at the instruction after `B, BINDEC`.
+
+The report describes BURY ("The content of TS 1 with 1 added is transferred
+to the position indicated in TS 31, and 1 is added to the reference in
+TS 31. We then proceed to carry out the instruction in TS 1.") but does not
+print it. The library's BURY and UNBURY are written to that description:
+
+```console
+$ ace library BURY
+# BURY (General Description). The content of TS 1 with 1 added is
+# transferred to the position indicated in TS 31, and 1 is added to the
+# reference in TS 31. We then proceed to carry out the instruction in TS 1.
+#
+# The report gives this description and no table. This table is ours.
+# TS 1 holds the position of the instruction B, BURY that brought us here.
+# The note buried is the position after it, and that is also where we go
+# on: to the B that enters the subsidiary. Only TS 2, 4, 5 and 6 are altered:
+# positions are put together with the adder, not with OR, because DISCRIM
+# is given its question in TS 8 and has to be reached through here.
+BURY
+  1   TS 31 - TS 2
+  3   ADD 'A'
+  4   BURY 40 - TS 2
+  6   ADD
+  7   TS 4 - BURY 16
+  9   TS 1 - TS 2
+ 11   ADD 'A'
+ 12   BURY 41 - TS 2
+ 14   ADD
+ 15   TS 4 - TS 6
+ 16   0000,0000,0000,0000,0000,0000,0000,0000
+ 17   TS 31 - TS 2
+ 19   ADD 'A'
+ 20   BURY 42 - TS 2
+ 22   ADD
+ 23   TS 4 - TS 31
+ 25   TS 1 - TS 2
+ 27   ADD 'A'
+ 28   BURY 43 - TS 2
+ 30   ADD
+ 31   TS 4 - TS 6
+ 32   B, 1
+# BURY 16 is written by BURY 7 each time: TS 6 into the position in TS 31.
+# The numbers: the code of type K; a pulse in digit 19, one instruction on;
+# a pulse in digit 18, one minor cycle on; and a pulse in digit 19 with
+# the digits of type B, which makes B, the instruction after.
+ 40   0000,0100,0000,0000,0000,0000,0000,0000
+ 41   0000,0000,0000,0000,0010,0000,0000,0000
+ 42   0000,0000,0000,0000,0100,0000,0000,0000
+ 43   0110,0000,0000,0000,0010,0000,0000,0000
+```
+
+TS 31 starts at DL 31,1. The list grows one minor cycle at a time, so
+subsidiaries can call subsidiaries, as CALPOL calls INDEXIN, PLUSIND,
+DISCRIM, TRANS 45, MULTIP and ADD.
+
+## What a subsidiary may alter
+
+Each table's general description says which storages it alters. BURY and
+UNBURY alter only TS 2, 4, 5 and 6. They could not use the logical
+operations, because DISCRIM is given its question in TS 8 and has to be
+reached through BURY.
+
+## A subsidiary of your own
+
+Any table can be one. It must end by unburying:
+
+```ace
+# cards: listing
+MAIN
+  1   B, BURY
+  2   B, TWICE
+  3   B, BURY
+  4   B, TWICE
+  5   B, BURY
+  6   B, BINDEC
+  7   O, DL 10
+  8   B, MAIN 8
+
+# TWICE doubles TS 13.
+TWICE
+  1   TS 13 - TS 2
+  3   S, POS, CANCEL, GIV, 2
+  4   TS 4 - TS 13
+  6   B, UNBURY
+
+TS 13   21
+```
+
+```output
+ 000000084
+```
+
+The job starts at the first table in the text, whatever the alphabet says.

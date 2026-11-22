@@ -1,0 +1,19 @@
+# cards: listing
+# The first n Fibonacci numbers, one card each. TS 20 counts, TS 21 and
+# TS 22 are the last two numbers.
+FIB
+  1   P, DL 2
+  2   DL 2,1 - TS 20
+  4   CLEAR TS 21
+  7   FIB 60 - TS 22
+ 10   TS 22 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+      TS 21 - TS 2;  ADD 'A';  TS 22 - TS 2;  ADD
+      TS 22 - TS 21;  TS 4 - TS 22
+      TS 20 - TS 2;  ADD 'A';  FIB 60 - TS 2;  SUBTRACT;  TS 4 - TS 20
+      TS 20 - TS 9;  TS 20 - TS 10;  AND
+      FIB 61 - TS 15;  FIB 62 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+ 58   B, FIB 58
+ 60   +1
+ 61   B, FIB 10
+ 62   B, FIB 58
