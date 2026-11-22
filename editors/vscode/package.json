@@ -1,0 +1,151 @@
+{
+  "name": "turing-ace-language",
+  "displayName": "Turing's ACE (1945)",
+  "description": "Syntax highlighting, a language server and run commands for the instruction tables of Alan Turing's 1945 report on the Automatic Computing Engine.",
+  "version": "0.1.0",
+  "publisher": "chrishayuk",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrishayuk/turing-ace"
+  },
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "turing",
+    "ace",
+    "1945",
+    "instruction tables",
+    "history"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "ace",
+        "aliases": [
+          "Turing's ACE",
+          "ace"
+        ],
+        "extensions": [
+          ".ace"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ace",
+        "scopeName": "source.ace",
+        "path": "./syntaxes/ace.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ace",
+        "path": "./snippets/ace.json"
+      }
+    ],
+    "configurationDefaults": {
+      "[ace]": {
+        "editor.formatOnSave": false,
+        "editor.wordBasedSuggestions": "off",
+        "editor.insertSpaces": true,
+        "editor.semanticHighlighting.enabled": true
+      }
+    },
+    "configuration": {
+      "title": "Turing's ACE",
+      "properties": {
+        "ace.path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to an ace program to use for the language server and for running jobs. Leave empty to use the one built into the extension."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "ace.run",
+        "title": "Run on the Machine",
+        "category": "ACE",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ace.trace",
+        "title": "Run and Trace Every Instruction",
+        "category": "ACE"
+      },
+      {
+        "command": "ace.tables",
+        "title": "Show the Machine Form",
+        "category": "ACE"
+      },
+      {
+        "command": "ace.audit",
+        "title": "Audit the Report's Tables",
+        "category": "ACE"
+      },
+      {
+        "command": "ace.restart",
+        "title": "Restart Language Server",
+        "category": "ACE"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "ace.run",
+          "when": "resourceLangId == ace"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "ace.run",
+          "when": "editorLangId == ace"
+        },
+        {
+          "command": "ace.trace",
+          "when": "editorLangId == ace"
+        },
+        {
+          "command": "ace.tables",
+          "when": "editorLangId == ace"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "ace.run",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "editorTextFocus && editorLangId == ace"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/grammar.test.js && node test/server.test.js",
+    "test:vscode": "node test/run-vscode.js",
+    "package": "node build.mjs && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.2.1",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.1.0",
+    "esbuild": "^0.25.0"
+  },
+  "private": true
+}

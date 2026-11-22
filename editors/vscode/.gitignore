@@ -1,0 +1,5 @@
+node_modules/
+.vscode-test/
+dist/
+server/ace.wasm
+*.vsix

@@ -1,0 +1,99 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Turing's ACE",
+  "scopeName": "source.ace",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#header" },
+    { "include": "#label" },
+    { "include": "#instruction" }
+  ],
+  "repository": {
+    "comment": { "name": "comment.line.number-sign.ace", "match": "#.*$" },
+    "header": {
+      "comment": "A table's name on a line of its own: INDEXIN, or CALPOL. with the report's full stop. A word of the notation alone is an instruction.",
+      "match": "^\\s*(?!(?:AND|OR|NOT|IFF|NEVER|ROTATE|ADD|SUBTRACT|MULTIPLY)\\s*(?:#|$))([A-Z][A-Z0-9]*)(\\.)?\\s*(?=#|$)",
+      "captures": {
+        "1": { "name": "entity.name.function.table.ace" },
+        "2": { "name": "punctuation.terminator.ace" }
+      }
+    },
+    "label": {
+      "comment": "The detail figure in front of an instruction: 11, or CALPOL 8.",
+      "patterns": [
+        {
+          "match": "^\\s*(?!TS\\b|DL\\b)([A-Z][A-Z0-9]*)\\s+([0-9]+)(\\.)",
+          "captures": {
+            "1": { "name": "entity.name.function.table.ace" },
+            "2": { "name": "entity.name.label.figure.ace" },
+            "3": { "name": "punctuation.terminator.ace" }
+          }
+        },
+        {
+          "match": "^\\s*([0-9]+)(\\.)?(?=\\s|$)",
+          "captures": {
+            "1": { "name": "entity.name.label.figure.ace" },
+            "2": { "name": "punctuation.terminator.ace" }
+          }
+        }
+      ]
+    },
+    "instruction": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#word" },
+        { "include": "#storage" },
+        { "include": "#type" },
+        { "include": "#arithmetic" },
+        { "include": "#logical" },
+        { "include": "#signal" },
+        { "include": "#tick" },
+        { "include": "#table" },
+        { "include": "#signed" },
+        { "include": "#number" },
+        { "include": "#transfer" },
+        { "include": "#punctuation" }
+      ]
+    },
+    "word": {
+      "comment": "A minor cycle or half of one, digit 1 first, in groups of four: 0000,0100,0000,0000",
+      "name": "constant.numeric.binary.ace",
+      "match": "(?<![0-9])[01]{4}(?:,[01]{4})+(?![0-9])"
+    },
+    "storage": {
+      "comment": "TS 6, or DL 1,14: a temporary storage, or a minor cycle of a delay line",
+      "match": "\\b(TS|DL)\\s+([0-9]+)(?:\\s*(,)\\s*([0-9]+))?",
+      "captures": {
+        "1": { "name": "variable.language.storage.ace" },
+        "2": { "name": "variable.other.storage.ace" },
+        "3": { "name": "punctuation.separator.ace" },
+        "4": { "name": "variable.other.storage.ace" }
+      }
+    },
+    "type": {
+      "comment": "An instruction by its type: B proceeds elsewhere; K to T are the operations of section 12",
+      "patterns": [
+        { "match": "\\b(B)\\s*(?=,)", "captures": { "1": { "name": "keyword.control.jump.ace" } } },
+        { "match": "\\b([KLMNOPQRST])\\s*(?=,)", "captures": { "1": { "name": "keyword.other.type.ace" } } }
+      ]
+    },
+    "arithmetic": { "name": "keyword.operator.arithmetic.ace", "match": "\\b(?:ADD|SUBTRACT|MULTIPLY|ROTATE|CLEAR)\\b" },
+    "logical": { "name": "keyword.operator.logical.ace", "match": "\\b(?:AND|OR|NOT|IFF|NEVER)\\b" },
+    "signal": { "name": "variable.parameter.signal.ace", "match": "\\b(?:POS|CANCEL|SELF|NOR|GIV|ERR1|ERR|DIFF|AUTO|THREE)\\b" },
+    "tick": { "name": "string.quoted.single.ace", "match": "['‘’][A-Za-z]+['‘’]" },
+    "table": { "name": "entity.name.function.table.ace", "match": "\\b[A-Z][A-Z0-9]*\\b" },
+    "signed": {
+      "comment": "A number with its sign against it: -2. A dash with space after it is a transfer.",
+      "name": "constant.numeric.ace",
+      "match": "(?<![A-Za-z0-9])[+\\-−][0-9]+\\b"
+    },
+    "number": { "name": "constant.numeric.ace", "match": "\\b[0-9]+\\b" },
+    "transfer": { "name": "keyword.operator.transfer.ace", "match": "->|[-–—−→]" },
+    "punctuation": {
+      "patterns": [
+        { "name": "punctuation.separator.ace", "match": "," },
+        { "name": "punctuation.terminator.ace", "match": "[;.]" }
+      ]
+    }
+  }
+}

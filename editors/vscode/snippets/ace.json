@@ -1,0 +1,48 @@
+{
+  "Table": {
+    "prefix": ["table"],
+    "body": [
+      "# ${1:NAME} (General Description). ${2:What it does, where it finds its",
+      "# material and where it leaves the result.}",
+      "${1:NAME}",
+      "  1   ${3:TS 6 - TS 2}",
+      "$0",
+      "      B, UNBURY"
+    ],
+    "description": "A table with its general description, ending as a subsidiary does"
+  },
+  "Subsidiary": {
+    "prefix": ["call", "bury"],
+    "body": "B, BURY;  B, ${1:INDEXIN}",
+    "description": "Start a subsidiary operation: bury a note of where we are, then go to the table"
+  },
+  "Return": { "prefix": ["return", "unbury"], "body": "B, UNBURY", "description": "End a subsidiary: go back to the note last buried" },
+  "Transfer": { "prefix": ["move", "transfer"], "body": "TS ${1:6} - TS ${2:2}", "description": "Transfer one storage to another, through TS 6" },
+  "Fetch": { "prefix": "fetch", "body": "DL ${1:3},${2:1} - TS ${3:2}", "description": "Transfer a minor cycle of a delay line into a temporary storage" },
+  "Store": { "prefix": "store", "body": "TS ${1:4} - DL ${2:3},${3:1}", "description": "Transfer a temporary storage into a minor cycle of a delay line" },
+  "Content": {
+    "prefix": ["content", "data"],
+    "body": "DL ${1:3},${2:1}  ${3:+0}",
+    "description": "Give a minor cycle its content before the start: a number, a word or an instruction"
+  },
+  "Word": {
+    "prefix": "word",
+    "body": "${1:0000},${2:0000},${3:0000},${4:0000},${5:0000},${6:0000},${7:0000},${8:0000}",
+    "description": "A minor cycle written out, digit 1 first"
+  },
+  "Choice": {
+    "prefix": ["choice", "discrim"],
+    "body": [
+      "${1:THIS} ${2:61} - TS 15;  ${1:THIS} ${3:62} - TS 16",
+      "B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1"
+    ],
+    "description": "Go one way if TS 8 has any digit 1, the other if not: the instructions are kept at the two detail figures"
+  },
+  "Punch": {
+    "prefix": ["punch", "print"],
+    "body": ["${1:TS 4} - TS 13", "B, BURY;  B, BINDEC", "O, DL 10"],
+    "description": "Punch a whole number in decimal on a card"
+  },
+  "Read": { "prefix": ["read", "card"], "body": "P, DL ${1:2}", "description": "Read the card in the reader into the first 12 minor cycles of a delay line" },
+  "Stop": { "prefix": ["stop", "halt"], "body": "B, ${1:THIS} ${2:N}", "description": "An instruction that proceeds with itself: the job is over" }
+}
