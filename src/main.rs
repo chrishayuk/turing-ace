@@ -1,0 +1,331 @@
+use ace::assemble::{assemble, Unit};
+use ace::machine::{listing, Card, Stop};
+use ace::word::{bits, Pos, P17};
+use ace::{check_errata, load, numbers, run, time, DECISIONS, ERRATA, LIBRARY, STANDING, STEP_LIMIT};
+use std::io::{IsTerminal, Read};
+use std::process::ExitCode;
+
+const USAGE: &str = "\
+ace: the Automatic Computing Engine as Alan Turing proposed it in 1945
+
+usage:
+  ace run FILE [--input N,N,...] [--cards numbers|listing|holes] [--trace]
+          [--time] [--errata LIST] [--limit N]
+        Run a job: the instruction tables in FILE and those it uses from the
+        library. It starts at the first table in the file and ends when an
+        instruction passes control to itself.
+        --input puts numbers on cards in the reader, twelve to a card.
+        Without it they are read from standard input.
+        --cards chooses how punched cards are shown: as twelve numbers, as
+        the line a tabulator would list, or as rows of holes.
+        --trace prints every instruction obeyed, with the minor cycle it
+        was found in. --time prints the machine time taken.
+        FILE may be `-`: standard input is then the tables, a line `----`,
+        and the numbers.
+  ace tables FILE [--emit listing|cards|digits] [--errata LIST]
+        Show a job in machine form: every instruction with its position,
+        its 32 digits and its popular form; or as the 80-column instruction
+        cards of section 7; or as the digits alone.
+  ace library [NAME]
+        List the tables in the library, or print one.
+  ace audit
+        Compare what the report prints with itself: the cards of Fig. 38
+        with the table they are cards for, and INDEXIN as printed with
+        INDEXIN corrected, on the machine.
+  ace errata
+        List the corrections to the printed tables.
+  ace decisions
+        List the places where the report says two things, and which was taken.
+  ace check FILE
+        List what is wrong with a job, and what will run but is probably not
+        what was meant, one per line as FILE:LINE:COLUMN: KIND: MESSAGE.
+  ace format FILE
+        Print the tables set out in columns.
+  ace lsp
+        Serve editors, speaking the Language Server Protocol on standard
+        input and output.
+
+  --errata takes `all` (the default), `none`, or names from `ace errata`.";
+
+struct Args {
+    rest: Vec<String>,
+}
+
+impl Args {
+    fn opt(&mut self, name: &str) -> Option<String> {
+        let i = self.rest.iter().position(|a| a == name)?;
+        if i + 1 >= self.rest.len() {
+            return None;
+        }
+        self.rest.remove(i);
+        Some(self.rest.remove(i))
+    }
+    fn flag(&mut self, name: &str) -> bool {
+        match self.rest.iter().position(|a| a == name) {
+            Some(i) => {
+                self.rest.remove(i);
+                true
+            }
+            None => false,
+        }
+    }
+}
+
+fn main() -> ExitCode {
+    match real_main() {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("ace: {}", e);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn show_card(card: &Card, how: &str) -> Result<String, String> {
+    Ok(match how {
+        "numbers" => {
+            let last = card.iter().rposition(|w| *w != 0).map(|i| i + 1).unwrap_or(1);
+            card[..last].iter().map(|w| (*w as i32).to_string()).collect::<Vec<_>>().join(" ")
+        }
+        "listing" => listing(card),
+        "holes" => {
+            let rows = ["12", "11", " 0", " 1", " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9"];
+            let mut s = String::new();
+            for (row, w) in rows.iter().zip(card) {
+                let holes: String = (1..=32).map(|k| if ace::word::digit(*w, k) { 'o' } else { '.' }).collect();
+                s.push_str(&format!("{}  {}\n", row, holes));
+            }
+            s.trim_end().to_string()
+        }
+        other => return Err(format!("unknown --cards {}", other)),
+    })
+}
+
+/// A position as a trace names it.
+fn place(unit: &Unit, cd: u32) -> String {
+    if cd & P17 != 0 {
+        return "TS 6".to_string();
+    }
+    let pos = Pos::of(cd);
+    unit.name_of(pos).unwrap_or_else(|| pos.to_string())
+}
+
+fn real_main() -> Result<(), String> {
+    let mut args = Args { rest: std::env::args().skip(1).collect() };
+    let cmd = args.rest.first().cloned().unwrap_or_default();
+    if cmd == "lsp" {
+        let stdin = std::io::stdin();
+        return ace::lsp::serve(&mut stdin.lock(), &mut std::io::stdout());
+    }
+    let errata_arg = args.opt("--errata").unwrap_or("all".into());
+    let errata: Vec<&str> = errata_arg.split(',').collect();
+    check_errata(&errata)?;
+    // FILE may be `-`: standard input is then the tables, a line of four
+    // dashes, and the numbers for the reader. The playground uses this.
+    let piped = if args.rest.get(1).map(String::as_str) == Some("-") {
+        let mut text = String::new();
+        std::io::stdin().read_to_string(&mut text).map_err(|e| e.to_string())?;
+        Some(match text.split_once("\n----\n") {
+            Some((tables, input)) => (tables.to_string(), input.to_string()),
+            None => (text, String::new()),
+        })
+    } else {
+        None
+    };
+    let source = |args: &Args| -> Result<(String, String), String> {
+        if let Some((tables, _)) = &piped {
+            return Ok(("-".to_string(), tables.clone()));
+        }
+        let path = args.rest.get(1).ok_or("which file?")?;
+        Ok((path.clone(), std::fs::read_to_string(path).map_err(|e| format!("{}: {}", path, e))?))
+    };
+    let job = |args: &Args| -> Result<Unit, String> {
+        let (name, text) = source(args)?;
+        let unit = assemble(&text, &errata);
+        match unit.errors().first() {
+            Some(p) => Err(format!("{}:{}:{}: {}", name, p.span.line + 1, p.span.start + 1, p.message)),
+            None => Ok(unit),
+        }
+    };
+    match cmd.as_str() {
+        "run" => {
+            let input = match (args.opt("--input"), &piped) {
+                (Some(list), _) => numbers(&list)?,
+                (None, Some((_, text))) => numbers(text)?,
+                (None, None) if !std::io::stdin().is_terminal() => {
+                    let mut text = String::new();
+                    std::io::stdin().read_to_string(&mut text).map_err(|e| e.to_string())?;
+                    numbers(&text)?
+                }
+                (None, None) => Vec::new(),
+            };
+            let cards = args.opt("--cards");
+            let limit = match args.opt("--limit") {
+                Some(n) => n.parse::<u64>().map_err(|_| format!("--limit {} is not a number", n))?,
+                None => STEP_LIMIT,
+            };
+            let (trace, timed) = (args.flag("--trace"), args.flag("--time"));
+            let unit = job(&args)?;
+            let how = cards.or(unit.cards.clone()).unwrap_or("numbers".into());
+            show_card(&[0; 12], &how)?;
+            let mut m = load(&unit, &input)?;
+            let mut shown = 0;
+            let stop = run(&mut m, limit, |m, e| {
+                if trace {
+                    println!(
+                        "{:>8}  {:<12} {}  {:<26} {}",
+                        e.fetched,
+                        place(&unit, e.cd),
+                        bits(e.ci),
+                        unit.popular(e.ci),
+                        e.effect
+                    );
+                }
+                for card in &m.punched[shown..] {
+                    println!("{}", show_card(card, &how).unwrap());
+                }
+                shown = m.punched.len();
+            });
+            if timed {
+                println!(
+                    "{} instructions in {} minor cycles: {} of machine time",
+                    m.steps,
+                    m.time,
+                    time(m.time)
+                );
+            }
+            match stop {
+                Stop::Idle(_) => Ok(()),
+                stop => Err(format!("stopped at {}: {}", place(&unit, m.cd), stop)),
+            }
+        }
+        "tables" => {
+            let emit = args.opt("--emit").unwrap_or("listing".into());
+            let unit = job(&args)?;
+            tables(&unit, &emit)
+        }
+        "library" => {
+            match args.rest.get(1) {
+                Some(name) => match ace::library(name, &errata) {
+                    Some(source) => print!("{}", source),
+                    None => return Err(format!("there is no table {} in the library", name)),
+                },
+                None => {
+                    for e in LIBRARY {
+                        let whose = if e.printed { "printed in the report" } else { "described in the report; the table is ours" };
+                        let unit = assemble(&ace::library(e.name, &errata).unwrap(), &errata);
+                        let n = unit.table(e.name).map(|t| t.slots.len()).unwrap_or(0);
+                        println!("{:<9}{:>3} minor cycles   {}", e.name, n, whose);
+                    }
+                }
+            }
+            Ok(())
+        }
+        "audit" => {
+            print!("{}", ace::audit::report());
+            Ok(())
+        }
+        "errata" => {
+            for e in ERRATA {
+                println!("{}  ({})\n    {}\n    {}\n    Known before: {}.\n", e.id, e.table, e.title, e.detail, e.known);
+            }
+            Ok(())
+        }
+        "decisions" => {
+            for d in DECISIONS {
+                println!("{}. {}", d.id, d.question);
+                println!("    one place:   {}", d.one);
+                println!("    another:     {}", d.other);
+                println!("    taken here:  {}", d.taken);
+                if !d.noted.is_empty() {
+                    println!("    noted by:    {}", d.noted);
+                }
+                println!();
+            }
+            println!("Before the start the tool sets:");
+            for (n, _, why) in STANDING {
+                println!("    TS {:<3} {}", n, why);
+            }
+            Ok(())
+        }
+        "check" | "format" => {
+            let (name, text) = source(&args)?;
+            if cmd == "format" {
+                print!("{}", ace::check::format(&text));
+                return Ok(());
+            }
+            let problems = ace::check::check(&text);
+            for d in &problems {
+                let kind = if d.error { "error" } else { "warning" };
+                println!("{}:{}:{}: {}: {}", name, d.span.line + 1, d.span.start + 1, kind, d.message);
+            }
+            match problems.iter().filter(|d| d.error).count() {
+                0 => Ok(()),
+                n => Err(format!("{} error{}", n, if n == 1 { "" } else { "s" })),
+            }
+        }
+        _ => {
+            println!("{}", USAGE);
+            Ok(())
+        }
+    }
+}
+
+/// The 80 columns of an instruction-table card, as section 7 (v) lays them
+/// out: popular name 1-8, detail figure 9-11, instruction 12-25, repeat of
+/// destination 26-40, genuine input 41-72, job number 73-77, spare 78-80.
+fn card(name: &str, fig: u32, popular: &str, pos: Pos, word: u32) -> String {
+    let destination: String = bits(pos.word()).replace(',', "")[17..].to_string();
+    let genuine: String = bits(word).replace(',', "");
+    let brief: String = popular.chars().filter(|c| *c != ' ').take(14).collect();
+    format!("{:<8.8}{:>3}{:<14}{}{}{:>5}   ", name, fig, brief, destination, genuine, 1)
+}
+
+fn tables(unit: &Unit, emit: &str) -> Result<(), String> {
+    match emit {
+        "listing" => {
+            for t in &unit.tables {
+                let whose = match ace::LIBRARY.iter().find(|e| e.name == t.name && t.library) {
+                    Some(e) if e.printed => "  (library: printed in the report)",
+                    Some(_) => "  (library: ours, to the report's description)",
+                    None => "",
+                };
+                println!("{}{}", t.name, whose);
+                for s in &t.slots {
+                    println!(
+                        "  {:>3}   {:<10} {}   {}",
+                        s.fig,
+                        s.pos.to_string(),
+                        bits(s.word),
+                        unit.popular(s.word)
+                    );
+                }
+                println!();
+            }
+            for (pos, w, _) in &unit.store {
+                println!("{:<18}{}   {}", pos.to_string(), bits(*w), *w as i32);
+            }
+            for (n, w, _) in &unit.ts {
+                println!("{:<18}{}   {}", format!("TS {}", n), bits(*w), *w as i32);
+            }
+        }
+        "cards" => {
+            println!("{}", "popular  figinstruction   destination    genuine input                   job");
+            for t in &unit.tables {
+                for s in &t.slots {
+                    println!("{}", card(&t.name, s.fig, &unit.popular(s.word), s.pos, s.word));
+                }
+            }
+        }
+        "digits" => {
+            for t in &unit.tables {
+                for s in &t.slots {
+                    println!("{}", bits(s.word));
+                }
+            }
+        }
+        e => return Err(format!("unknown --emit {}", e)),
+    }
+    Ok(())
+}
+

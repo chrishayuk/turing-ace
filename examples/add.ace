@@ -1,0 +1,13 @@
+# cards: listing
+# Read a card with two numbers on it and punch their sum.
+SUM
+  1   P, DL 2
+  2   DL 2,1 - TS 2
+  4   ADD 'A'
+  5   DL 2,2 - TS 2
+  7   ADD
+  8   TS 4 - TS 13
+ 10   B, BURY
+ 11   B, BINDEC
+ 12   O, DL 10
+ 13   B, SUM 13

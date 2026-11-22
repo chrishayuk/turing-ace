@@ -1,0 +1,16 @@
+# ADD is analogous to MULTIP.
+#
+# That is all the report says. This table is ours and does whole numbers
+# only: TS 18 plus TS 20 goes to TS 22, and TS 23 is cleared. TS 2, 4, 5, 6
+# and 8 are altered.
+#
+# ADD is also the name of an instruction, so the head of this table is
+# written with the full stop the report gives CALPOL.
+ADD.
+  1   TS 18 - TS 2
+  3   ADD 'A'
+  4   TS 20 - TS 2
+  6   ADD
+  7   TS 4 - TS 22
+  9   CLEAR TS 23
+ 12   B, UNBURY

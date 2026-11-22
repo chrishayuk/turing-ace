@@ -1,0 +1,8 @@
+# TRANS 45 (General Description). The following set of transfers is made
+# TS 22 - TS 20, TS 23 - TS 21.
+#
+# The report gives this description and no table. This table is ours.
+TRANS
+ 45   TS 22 - TS 20
+ 47   TS 23 - TS 21
+ 49   B, UNBURY

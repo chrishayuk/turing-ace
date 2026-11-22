@@ -1,0 +1,80 @@
+# BINDEC (General Description). The number in TS 13 is translated into
+# decimal form and transferred into DL 10. The notation of the decimal
+# form is such that the content of DL 10 can be passed out onto a card in
+# the usual way and if the card is then listed the digits of the number
+# will then appear on the listing paper in the usual way. Only the first
+# 12 minor cycles of DL 10 are used, and a decimal digit is represented by
+# the minor cycle in which a pulse occurs, and its significance by the
+# position of it within the minor cycle.
+#
+# The report describes BINDEC for the two minor cycles of its arithmetical
+# code and prints no table. This table is ours and does whole numbers
+# only: TS 13 holds an integer of at most nine decimal digits. Column 1 of
+# the card is the sign and columns 2 to 10 the digits.
+#
+# The method is the one section 7 points to: "short multiplication is a
+# CAO". The number is multiplied once by 2^60 / 10^9, which makes it a
+# fraction, and then nine times by ten, each time pushing one decimal digit
+# out of the top. TS 2-6, 8-10, 15-17, 24, 30 and 32 are altered. TS 7 is
+# left at 16.
+BINDEC
+  1   NEVER
+  2   TS 8 - TS 6
+  3   TS 6 - DL 10,1;  TS 6 - DL 10,2;  TS 6 - DL 10,3;  TS 6 - DL 10,4
+  7   TS 6 - DL 10,5;  TS 6 - DL 10,6;  TS 6 - DL 10,7;  TS 6 - DL 10,8
+ 11   TS 6 - DL 10,9;  TS 6 - DL 10,10; TS 6 - DL 10,11; TS 6 - DL 10,12
+# The sign: TS 5 is all ones for a negative number. A hole in row 11.
+ 15   TS 13 - TS 2;  ADD 'A';  TS 5 - TS 6;  TS 6 - TS 10;  TS 6 - TS 3
+      BINDEC 201 - TS 9;  AND;  TS 8 - DL 10,2
+# The size: the number with every digit changed if it is negative, less
+# the sign.
+      TS 13 - TS 9;  IFF;  TS 8 - TS 10;  NOT;  TS 8 - TS 2;  ADD 'A'
+      TS 3 - TS 2;  SUBTRACT;  TS 4 - TS 2
+      BINDEC 202 - TS 3;  MULTIPLY 'A'
+      TS 4 - TS 32;  TS 5 - TS 30
+      BINDEC 203 - TS 17
+# Each decimal digit. First the fraction is put back into TS 4 and TS 5
+# from TS 32 and TS 30, the top half by two rotations of 16.
+ 60   TS 30 - TS 2;  ADD 'A';  ROTATE 16;  ROTATE 16
+      TS 32 - TS 9;  BINDEC 204 - TS 10;  AND;  TS 8 - TS 2;  ADD
+      BINDEC 205 - TS 10;  AND;  TS 8 - TS 2;  SUBTRACT
+      S, POS, CANCEL, SELF, GIV, 10
+      TS 4 - TS 32
+      TS 5 - TS 9;  BINDEC 206 - TS 10;  AND;  TS 8 - TS 30
+# The digit is in digits 29-32 of TS 5. Rotating 21 places brings it to
+# digits 18-21, where it counts minor cycles.
+      BINDEC 207 - TS 10;  AND;  TS 8 - TS 2;  ADD 'A'
+      BINDEC 208 - TS 7;  ROTATE 21;  BINDEC 209 - TS 7
+      TS 5 - TS 9;  BINDEC 210 - TS 10;  AND;  TS 8 - TS 2;  ADD 'A'
+# Fetch the row for that digit, put the column's pulse in it, and make the
+# instruction that stores it again: the same with digit 8 taken off.
+      BINDEC 211 - TS 2;  ADD;  TS 4 - TS 6;  B, 1
+      TS 6 - TS 9;  TS 17 - TS 10;  OR
+      BINDEC 212 - TS 2;  SUBTRACT;  TS 4 - BINDEC 150
+      TS 8 - TS 6
+150   0000,0000,0000,0000,0000,0000,0000,0000
+# The next column, and whether that was the last.
+151   TS 17 - TS 2;  ADD 'A';  ADD;  TS 4 - TS 17
+      TS 17 - TS 9;  BINDEC 213 - TS 10;  AND
+      BINDEC 214 - TS 15;  BINDEC 215 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+190   B, UNBURY
+# The numbers: 1; 2^60 / 10^9; the pulse of column 2; digits 1-31;
+# digit 32; digits 1-28; digits 29-32; 21; 16; digits 18-21; the
+# instruction that fetches the row of the digit 0; digit 8; the pulse of
+# column 11; and the two ways on.
+201   +1
+202   +1152921505
+203   +2
+204   1111,1111,1111,1111,1111,1111,1111,1110
+205   0000,0000,0000,0000,0000,0000,0000,0001
+206   1111,1111,1111,1111,1111,1111,1111,0000
+207   0000,0000,0000,0000,0000,0000,0000,1111
+208   +21
+209   +16
+210   0000,0000,0000,0000,0111,1000,0000,0000
+211   L, DL 10,3
+212   0000,0001,0000,0000,0000,0000,0000,0000
+213   0000,0000,0010,0000,0000,0000,0000,0000
+214   B, BINDEC 190
+215   B, BINDEC 60

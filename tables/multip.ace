@@ -1,0 +1,17 @@
+# MULTIP (General Description). The number in TS 18, 19 is multiplied by
+# the number in TS 20, 21: the result is brought to standard form by shift
+# of decimal point. An error is obtained for the product by using the
+# errors in the given numbers and allowing for rounding off. The result is
+# stored in TS 22, 23.
+#
+# The report gives this description and no table. This table is ours and
+# does whole numbers only: TS 18 times TS 20 goes to TS 22, and TS 23,
+# where the arithmetical code keeps the decimal point and the error, is
+# cleared. TS 2-6 and 8 are altered.
+MULTIP
+  1   TS 18 - TS 2
+  3   TS 20 - TS 3
+  5   MULTIPLY 'A'
+  6   TS 4 - TS 22
+  8   CLEAR TS 23
+ 11   B, UNBURY

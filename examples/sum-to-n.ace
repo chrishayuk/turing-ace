@@ -1,0 +1,22 @@
+# cards: listing
+# 1 + 2 + ... + n, for the n on the card. TS 20 counts down and TS 21
+# holds the total. DISCRIM chooses the way on: back round while TS 20
+# still has a digit in it, out when it has none.
+TOTAL
+  1   P, DL 2
+  2   DL 2,1 - TS 20
+  4   CLEAR TS 21
+ 10   TS 21 - TS 2;  ADD 'A';  TS 20 - TS 2;  ADD;  TS 4 - TS 21
+      TS 20 - TS 2;  ADD 'A';  TOTAL 60 - TS 2;  SUBTRACT;  TS 4 - TS 20
+      TS 20 - TS 9;  TS 20 - TS 10;  AND
+      TOTAL 61 - TS 15;  TOTAL 62 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+ 50   TS 21 - TS 13
+ 52   B, BURY
+ 53   B, BINDEC
+ 54   O, DL 10
+ 55   B, TOTAL 55
+# The numbers: 1, and the two ways on.
+ 60   +1
+ 61   B, TOTAL 10
+ 62   B, TOTAL 50

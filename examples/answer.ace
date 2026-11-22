@@ -1,0 +1,14 @@
+# cards: listing
+# Six times seven, on a card.
+ANSWER
+  1   DL 1,1 - TS 2
+  3   DL 1,2 - TS 3
+  5   MULTIPLY 'A'
+  6   TS 4 - TS 13
+  8   B, BURY
+  9   B, BINDEC
+ 10   O, DL 10
+ 11   B, ANSWER 11
+
+DL 1,1   6
+DL 1,2   7

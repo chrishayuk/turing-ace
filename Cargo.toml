@@ -1,0 +1,16 @@
+[package]
+name = "turing-ace"
+version = "0.1.0"
+edition = "2021"
+description = "The Automatic Computing Engine as Alan Turing proposed it in 1945: the machine, his instruction tables and the notation they are written in"
+license = "Apache-2.0"
+
+[[bin]]
+name = "ace"
+path = "src/main.rs"
+
+[lib]
+name = "ace"
+path = "src/lib.rs"
+
+[dependencies]

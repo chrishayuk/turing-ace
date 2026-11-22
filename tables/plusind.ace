@@ -1,0 +1,15 @@
+# PLUSIND (General Description). 1 is added to the position reference in
+# TS 27, e.g. DL 7, 9 becomes DL 7, 10, but DL 7, 32 becomes DL 8, 1.
+#
+# The report gives this description and no table. This table is ours.
+# TS 2, 4, 5 and 6 are altered.
+PLUSIND
+  1   TS 27 - TS 2
+  3   ADD 'A'
+  4   PLUSIND 20 - TS 2
+  6   ADD
+  7   TS 4 - TS 6
+  8   TS 6 - TS 27
+  9   B, UNBURY
+# A pulse in digit 18: one minor cycle on.
+ 20   0000,0000,0000,0000,0100,0000,0000,0000

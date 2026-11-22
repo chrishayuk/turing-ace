@@ -1,0 +1,16 @@
+# cards: listing
+# Turing's CALPOL: x^3 - 2x + 5 at x = 7. The sixteen coefficients are in
+# DL 3 in pairs, highest power first; the last four are 1, 0, -2, 5.
+POLY
+  1   B, BURY
+  2   B, CALPOL
+  3   TS 25 - TS 13
+  5   B, BURY
+  6   B, BINDEC
+  7   O, DL 10
+  8   B, POLY 8
+
+TS 13    7
+DL 3,25  +1
+DL 3,29  -2
+DL 3,31  +5

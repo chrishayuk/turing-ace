@@ -1,0 +1,10 @@
+# Fetch the number whose position is in TS 27, with INDEXIN, and punch it.
+FETCH
+  1   B, BURY
+  2   B, INDEXIN
+  3   TS 28 - DL 2,1
+  5   O, DL 2
+  6   B, FETCH 6
+
+TS 27   L, DL 3,5
+DL 3,5  1945

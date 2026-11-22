@@ -1,0 +1,33 @@
+# DISCRIM (General Description). If TS 8 contains any digit 1 then TS 15
+# is passed into TS 24, otherwise TS 16 is passed into TS 24. The contents
+# of TS 2, TS 3, TS 4, TS 5, TS 8 are altered.
+#
+# Outline of operation. TS 8 is transferred to TS 2 and then subtracted
+# from zero, passing into the partial sums register TS 4, TS 5. By taking
+# out TS 5 we obtain a minor cycle full of digits 1 or of digits 0
+# according as there was or was not a digit 1 in TS 8 originally. We then
+# form (TS 5 & TS 15) v (-TS 5 & TS 16) by logical operations and pass it
+# on to TS 24.
+#
+# The report gives the description and the outline and no table. This
+# table is ours, and follows the outline step for step. TS 6, 9 and 10 are
+# altered as well, and TS 6 is left holding what went into TS 24.
+DISCRIM
+  1   TS 8 - TS 2
+  3   SUBTRACT 'A'
+  4   TS 5 - TS 6
+  5   TS 6 - TS 9
+  6   TS 6 - TS 3
+  7   TS 15 - TS 10
+  9   AND
+ 10   TS 3 - TS 10
+ 12   TS 8 - TS 3
+ 14   NOT
+ 15   TS 8 - TS 9
+ 17   TS 16 - TS 10
+ 19   AND
+ 20   TS 8 - TS 9
+ 22   TS 3 - TS 10
+ 24   OR
+ 25   TS 8 - TS 24
+ 27   B, UNBURY

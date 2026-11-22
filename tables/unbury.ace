@@ -1,0 +1,29 @@
+# UNBURY (General Description). The minor cycle whose position is given
+# in TS 31 is taken to be position of the next instruction.
+#
+# The report gives this description and no table. This table is ours.
+# TS 31 is first moved back one minor cycle, to the most recent note. The
+# note is the position of the B that entered the subsidiary, so we go on at
+# the instruction after it. Only TS 2, 4, 5 and 6 are altered.
+UNBURY
+  1   TS 31 - TS 2
+  3   ADD 'A'
+  4   UNBURY 40 - TS 2
+  6   SUBTRACT
+  7   TS 4 - TS 31
+  9   UNBURY 41 - TS 2
+ 11   ADD
+ 12   TS 4 - TS 6
+ 13   B, 1
+ 14   TS 6 - TS 2
+ 15   ADD 'A'
+ 16   UNBURY 42 - TS 2
+ 18   ADD
+ 19   TS 4 - TS 6
+ 20   B, 1
+# UNBURY 13 carries out the instruction just made, which fetches the note.
+# The numbers: a pulse in digit 18; the code of type L; and a pulse in
+# digit 19 with the digits of type B.
+ 40   0000,0000,0000,0000,0100,0000,0000,0000
+ 41   0000,0101,0000,0000,0000,0000,0000,0000
+ 42   0110,0000,0000,0000,0010,0000,0000,0000
