@@ -9,12 +9,22 @@
 
 import { run, stdinFor } from "./wasi.js";
 
+/** Compiles ace.wasm, from its bytes if the server does not call it application/wasm. */
+async function compile(url) {
+  const response = await fetch(url);
+  try {
+    return await WebAssembly.compileStreaming(response.clone());
+  } catch {
+    return WebAssembly.compile(await response.arrayBuffer());
+  }
+}
+
 const FLUSH_MS = 50;
 
 self.onmessage = async (event) => {
   const { wasmUrl, args, program, input, limit = 400_000 } = event.data;
   try {
-    const module = await WebAssembly.compileStreaming(fetch(wasmUrl));
+    const module = await compile(wasmUrl);
     const decoders = { 1: new TextDecoder(), 2: new TextDecoder() };
     const pending = { 1: "", 2: "" };
     let sent = 0;
