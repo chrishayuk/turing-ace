@@ -154,9 +154,9 @@ it is the numbers that cost the time, not the instructions.
 
 ## Examples
 
-`examples/` holds 16 jobs, from reading and punching a card to factorials,
+`examples/` holds 17 jobs, from reading and punching a card to factorials,
 Fibonacci numbers, Euclid's algorithm by subtraction, an instruction built
-and obeyed in TS 6, and CALPOL working out x³ - 2x + 5. Each has an `.out`
+and obeyed in TS 6, and CALPOL working out x³ - 2x + 5, to Knuth and Trabb Pardo's TPK (`tpk.ace`). Each has an `.out`
 file with what it punches and, where it reads cards, an `.in` file.
 `cargo test` runs them all.
 
@@ -322,8 +322,10 @@ is not to say there is none.
 
 Running a design that existed only on paper, and finding what it needed, has
 been done before, and this project follows that work. Knuth and Trabb Pardo
-(*The Early Development of Programming Languages*, 1976) wrote one program
-in every early notation and read the results closely. Raúl Rojas and
+(*The Early Development of Programming Languages*, 1976) wrote one program,
+TPK, in each of some twenty early high-level languages and read the results
+closely; machine codes such as the ACE's were outside their scope.
+`examples/tpk.ace` writes it for the ACE. Raúl Rojas and
 colleagues at the Free University of Berlin implemented Zuse's Plankalkül
 from his manuscripts around 2000. Those who have run Ada Lovelace's program
 for the Bernoulli numbers, from Note G of 1843, found an error in it. Doron

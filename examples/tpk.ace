@@ -1,0 +1,133 @@
+# cards: listing
+# TPK, the algorithm Knuth and Trabb Pardo wrote in some twenty early
+# languages (D. E. Knuth and L. Trabb Pardo, "The Early Development of
+# Programming Languages", Stanford STAN-CS-76-562, 1976, p. 3), written as
+# an instruction table for the ACE of 1945. Their ALGOL 60:
+#
+#   TPK: begin integer i; real y; real array a[0:10];
+#     real procedure f(t); real t; value t;
+#       f := sqrt(abs(t)) + 5 x t ^ 3;
+#     for i := 0 step 1 until 10 do read(a[i]);
+#     for i := 10 step -1 until 0 do
+#     begin y := f(a[i]);
+#       if y > 400 then write(i, "TOO LARGE")
+#       else write(i, y);
+#     end
+#   end.
+#
+# The input is one card of eleven whole numbers, a0 to a10. The output is
+# 22 cards, i then f(a[i]) or 999, for i = 10 down to 0.
+#
+# What had to change, and why:
+# - Whole numbers. The report's arithmetical code of two minor cycles,
+#   2^m x beta with an error (section 4), is described but MULTIP and ADD,
+#   the tables that would work in it, are not printed; the library's do
+#   whole numbers only. So, by Knuth and Trabb Pardo's rule for such
+#   languages (pp. 4-5), the a[i] are whole numbers and sqrt is the largest
+#   whole number whose square is not more than its argument.
+# - 999 for TOO LARGE. Cards come out as BINDEC leaves them in DL 10,
+#   digits in columns (section 13); the report gives no letters.
+# - One card per value: BINDEC puts one number on a card, so write(i, y)
+#   becomes two cards, and the output is the 22 values b0 to b21 of Knuth
+#   and Trabb Pardo's rule.
+# - read(a[i]) is one card: P, DL 2 reads twelve numbers at once into DL 2,1
+#   to DL 2,12, so a[i] is in DL 2,i+1. It is fetched by INDEXIN, with a
+#   whole order of type L in TS 27, as CALPOL calls it; TS 27 is moved back
+#   one minor cycle each time round, the reverse of PLUSIND.
+# - The square root. The report has no table for it and says only that
+#   division is an ITO (section 12, p. 27). SQROOT is ours: it takes away
+#   1, 3, 5, ... and counts, needing no division.
+# - f is a subsidiary, F, entered with B, BURY; B, F and left by B, UNBURY
+#   (sections 6 and 13). Its argument is in TS 13 and its value comes back
+#   in TS 25, the storages CALPOL uses for its argument and result.
+# - 5 x t^3: t^3 by MULTIP twice with TRANS 45 between, as CALPOL does;
+#   5 x by short multiplication, a single instruction (section 4).
+# - y > 400 is asked as "is 400 - y negative?": TS 5 is all ones after a
+#   subtraction that comes out negative, and DISCRIM chooses the way on.
+# - It needs two of the corrections `ace errata` lists: `half` in INDEXIN,
+#   and `sign` in DISCRIM, because both questions it asks put a word of all
+#   ones in TS 8. With `--errata none` it never stops.
+#
+# TS 29 is i, TS 27 the order that fetches a[i], TS 25 is y.
+TPK
+  1   P, DL 2
+  2   TPK 200 - TS 27;  TPK 201 - TS 29
+# y := f(a[i])
+ 10   B, BURY;  B, INDEXIN;  TS 28 - TS 13
+      B, BURY;  B, F
+# write i
+      TS 29 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+# y > 400?
+      TPK 202 - TS 2;  ADD 'A';  TS 25 - TS 2;  SUBTRACT
+      TS 5 - TS 9;  TS 5 - TS 10;  AND
+      TPK 203 - TS 15;  TPK 204 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+# TOO LARGE: 999 in place of y.
+ 60   TPK 205 - TS 25
+# write y
+ 62   TS 25 - TS 13;  B, BURY;  B, BINDEC;  O, DL 10
+# Back one minor cycle, i := i - 1, and round again unless i is negative.
+      TS 27 - TS 2;  ADD 'A';  TPK 207 - TS 2;  SUBTRACT;  TS 4 - TS 27
+      TS 29 - TS 2;  ADD 'A';  TPK 206 - TS 2;  SUBTRACT;  TS 4 - TS 29
+      TS 5 - TS 9;  TS 5 - TS 10;  AND
+      TPK 208 - TS 15;  TPK 209 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+150   B, TPK 150
+# The numbers: the order that fetches a10; 10; 400; the two ways on from
+# y > 400; 999; 1; a pulse in digit 18, one minor cycle; and the two ways
+# on at the end of the loop.
+200   L, DL 2,11
+201   +10
+202   +400
+203   B, TPK 60
+204   B, TPK 62
+205   +999
+206   +1
+207   0000,0000,0000,0000,0100,0000,0000,0000
+208   B, TPK 150
+209   B, TPK 10
+
+# F (General Description). The value of sqrt|t| + 5 t^3 for the whole
+# number t in TS 13 is put into TS 25, sqrt being the largest whole number
+# whose square is not more than |t|. TS 2-6, 8-10, 15, 16, 18-24 are
+# altered.
+F
+# |t|: s = TS 5 is all ones if t is negative; (t with every digit changed
+# where s has a 1) - s.
+  1   TS 13 - TS 2;  ADD 'A';  TS 5 - TS 19
+      TS 13 - TS 9;  TS 19 - TS 10;  IFF;  TS 8 - TS 10;  NOT
+      TS 8 - TS 2;  ADD 'A';  TS 19 - TS 2;  SUBTRACT;  TS 4 - TS 18
+      B, BURY;  B, SQROOT;  TS 22 - TS 25
+# t^3, by MULTIP twice: TS 18 times TS 20 into TS 22.
+      TS 13 - TS 18;  TS 13 - TS 20;  B, BURY;  B, MULTIP
+      B, BURY;  B, TRANS 45;  B, BURY;  B, MULTIP
+# 5 t^3 by short multiplication, and the root added by ADD.
+      TS 22 - TS 2;  S, POS, CANCEL, GIV, 5;  TS 4 - TS 18
+      TS 25 - TS 20;  B, BURY;  B, ADD;  TS 22 - TS 25
+      B, UNBURY
+
+# SQROOT (General Description). The largest whole number whose square is
+# not more than the whole number in TS 18, which must not be negative, is
+# put into TS 22. TS 2-6, 8-10, 15, 16, 18, 19 and 24 are altered.
+#
+# Outline of operation. 1, 3, 5, ... are taken from TS 18 in turn, the
+# next odd number being kept in TS 19, until what is left would be
+# negative. How many were taken away is the root: 1 + 3 + ... + (2r - 1)
+# is r squared.
+SQROOT
+  1   CLEAR TS 22
+  4   SQROOT 60 - TS 19
+ 10   TS 18 - TS 2;  ADD 'A';  TS 19 - TS 2;  SUBTRACT;  TS 4 - TS 18
+      TS 5 - TS 9;  TS 5 - TS 10;  AND
+      SQROOT 62 - TS 15;  SQROOT 61 - TS 16
+      B, BURY;  B, DISCRIM;  TS 24 - TS 6;  B, 1
+# Not negative: count one, and the next odd number.
+ 40   TS 22 - TS 2;  ADD 'A';  SQROOT 60 - TS 2;  ADD;  TS 4 - TS 22
+      TS 19 - TS 2;  ADD 'A';  SQROOT 63 - TS 2;  ADD;  TS 4 - TS 19
+      B, SQROOT 10
+ 59   B, UNBURY
+# The numbers: 1; the two ways on; 2.
+ 60   +1
+ 61   B, SQROOT 40
+ 62   B, SQROOT 59
+ 63   +2
